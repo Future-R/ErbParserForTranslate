@@ -136,6 +136,15 @@ public class ERBParser
                     varNameList.Add(leftValue);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
                 }
+                // 匹配字符串'=赋值，左值一定是字符串变量，右值一定是字符串
+                if (lineString.Contains(" '= "))
+                {
+                    int eqIndex = lineString.IndexOf("=");
+                    string leftValue = lineString.Substring(0, eqIndex).Trim().TrimEnd('\'');
+                    string rightValue = lineString.Substring(eqIndex + 1).Trim();
+                    varNameList.Add(leftValue);
+                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                }
                 // 匹配输出
                 // 懒得手写了，用正则先跑起来再说
                 else
@@ -152,7 +161,7 @@ public class ERBParser
         }
     }
 
-    // 将变量名按:拆分，合并重复成员，剔除系统内置变量名
+    // 将变量名按:拆分，剔除自然数，合并重复成员，剔除系统内置变量名
     List<string> VarNameListSplit(List<string> originalList)
     {
         List<string> splitList = new List<string>();
@@ -160,7 +169,7 @@ public class ERBParser
         {
             splitList.AddRange(item.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries));
         }
-        return splitList.Distinct().Except(OriginVarName).ToList();
+        return splitList.Distinct().Where(s => !IsNaturalNumber(s)).Except(OriginVarName).ToList();
     }
     // 剔除系统内置变量名
     // 是否需要剔除当前文件的变量名，待观察
@@ -169,7 +178,17 @@ public class ERBParser
         return originalList.Except(OriginVarName).ToList();
     }
 
-    public void DebugPrint()
+    /// <summary>
+    /// 字符串可转化为int且大于等于0
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
+    bool IsNaturalNumber(string str)
+    {
+        return int.TryParse(str, out int n) && n >= 0;
+    }
+
+        public void DebugPrint()
     {
         Console.WriteLine("======变量名======");
         foreach (var item in VarNameListSplit(varNameList))
