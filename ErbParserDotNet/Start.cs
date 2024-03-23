@@ -11,7 +11,7 @@ public static class Start
     {
         Console.WriteLine("请拖入：");
         ERBParser parser = new ERBParser();
-        parser.ParseFile(Console.ReadLine());
+        parser.ParseFile(Console.ReadLine().Trim('"'));
         parser.DebugPrint();
         Console.WriteLine("完成！");
         Console.ReadKey();
