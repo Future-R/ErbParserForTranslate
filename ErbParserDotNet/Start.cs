@@ -4,39 +4,61 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Diagnostics;
 
 public static class Start
 {
-    static readonly string[] fileExtensions = new string[] { ".erb", ".erh", ".csv" };
+    static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
     public static void Main()
     {
-        Console.WriteLine("请拖入ERB目录（将遍历子目录）：");
+        Console.WriteLine("请拖入游戏根目录：");
+        // 统计耗时
+        Stopwatch stopwatch = new Stopwatch();
+
+        stopwatch.Start();
         ReadFile(Console.ReadLine().Trim('"'));
-        
-        Console.WriteLine("完成！");
+
+        stopwatch.Stop();
+        TimeSpan ts = stopwatch.Elapsed;
+
+        // 格式化并输出耗时
+        string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+            ts.Hours, ts.Minutes, ts.Seconds,
+            ts.Milliseconds / 10);
+        Console.WriteLine("耗时：" + elapsedTime);
         Console.ReadKey();
     }
 
     static void ReadFile(string path)
     {
-        // 获取目录下所有".erb", ".erh", ".csv"
-        var fileNames = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
-            .Where(file => fileExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
-        foreach (string fileName in fileNames)
+        // 处理CSV
+        string csvDirectory = Path.Combine(path, "CSV");
+        string erbDirectory = Path.Combine(path, "ERB");
+
+        if (Directory.Exists(csvDirectory))
         {
-            // 解析CSV
-            if (fileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            // TODO
+        }
+        else
+        {
+            throw new DirectoryNotFoundException($"找不到CSV目录: {csvDirectory}");
+        }
+        if (Directory.Exists(erbDirectory))
+        {
+            var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
+            .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
+            foreach (string fileName in erbNames)
             {
-                // TODO
-            }
-            // 解析ERB和ERH
-            else
-            {
+
                 ERBParser parser = new ERBParser();
                 parser.ParseFile(fileName);
                 parser.DebugPrint();
+
             }
+        }
+        else
+        {
+            throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
     }
 }

@@ -7,13 +7,13 @@ using System.Text.RegularExpressions;
 public class ERBParser
 {
     // 正则匹配输出指令的右值
-    // 很奇怪"PRINTBUTTON @"【抽卡！】",1"会匹配到"BUTTON @"【抽卡！】"而不是"@"【抽卡！】"
     // 正则真的很难维护捏
     private static readonly Regex EraOutputPattern = new Regex(
-        @"(PRINT|PRINTSINGLE|PRINTC|PRINTDATA|PRINTBUTTON|PRINTPLAIN)(?:FORM|FORMS)?(?:K|D)?(?:L|W)?\s*(?<modifier>[|].*)?\s*(?<value>.*)",
+        @"(PRINT|PRINTSINGLE|PRINTC|PRINTDATA)(?:FORM|FORMS)?(?:K|D)?(?:L|W)?\s*(?<modifier>[|].*)?\s*(?<value>.*)",
         RegexOptions.Compiled);
 
     // 匹配系统变量，这些变量不会丢给译者翻译
+    // 系统全局变量几乎不会引用，就先不放进来影响性能了
     private static readonly string[] OriginVarName = new[]
     {
         "LOCAL", "LOCALS", "ARG", "ARGS", "RESULT", "RESULTS", "COUNT"
@@ -55,9 +55,19 @@ public class ERBParser
                 if (start != -1 && start < end)
                 {
                     string args = lineString.Substring(start + 1, end - start - 1);
-                    varNameList.AddRange(args.Split(',')
+                    var tokens = args.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                        .Select(arg => arg.Trim()));
+                        .Select(arg => arg.Trim());
+                    // 参数Token里可能不止参数名，还可能有 参数名 = "初始值"，此时判断右值是否为字符串，是字符串的话扔到text里
+                    foreach (var token in tokens)
+                    {
+                        string[] parts = token.Split('=');
+                        varNameList.Add(parts[0].Trim());
+                        if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
+                        {
+                            textList.Add(parts[1].Trim());
+                        }
+                    }
                 }
                 else
                 {
@@ -103,7 +113,7 @@ public class ERBParser
                     // 类型推导，如果是数值型，那么右值不用翻译，continue掉
                     bool isIntegerValue = leftEnumer.FirstOrDefault() == "#DIM";
                     if (isIntegerValue) continue;
-                    // 否则是字符串型，逗号切割，trim掉双引号，但不要trim掉引号里的空格
+                    // 否则是字符串型，逗号切割，不trim掉双引号是为了方便后续做替换
                     else
                     {
                         var rightEnumer = rightValue.Split(',')
@@ -133,6 +143,53 @@ public class ERBParser
             {
                 var rightValue = lineString.Substring(4).Trim();
                 if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+            }
+            // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值
+            else if (lineString.StartsWith("RETURN"))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                if (spIndex != -1)
+                {
+                    string rightValue = lineString.Substring(spIndex).Trim();
+                    if (lineString.StartsWith("RETURNF"))
+                    {
+                        textList.Add(rightValue);
+                    }
+                    else
+                    {
+                        varNameList.Add(rightValue);
+                    }
+                }
+            }
+            // 匹配打印按钮，可能是PRINTBUTTON、PRINTBUTTONC、PRINTBUTTONLC
+            // 空格取右值，右值以逗号分隔，参数1一定是字符串，参数2可能是纯数
+            else if (lineString.StartsWith("PRINTBUTTON"))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).Trim();
+                int cmIndex = lineString.IndexOf(",");
+                if (cmIndex != -1 && cmIndex + 1 < lineString.Length)
+                {
+                    string commaLeft = lineString.Substring(0, cmIndex).Trim();
+                    string commaRight = lineString.Substring(cmIndex + 1).Trim();
+                    textList.Add(commaLeft);
+                    // 参数2如果是纯数就不翻译了
+                    if (!int.TryParse(commaRight, out _))
+                    {
+                        textList.Add(commaRight);
+                    }
+                }
+            }
+            // PRINTPLAIN，保证右值不会被解析成代码。可用的修饰符为 |FORM
+            else if (lineString.StartsWith("PRINTPLAIN"))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                if (spIndex == -1)
+                {
+                    continue;
+                }
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                textList.Add(rightValue);
             }
             else
             {
