@@ -25,10 +25,9 @@ public class ERBParser
 
     public void ParseFile(string filePath)
     {
-        string content;
         try
         {
-            content = File.ReadAllText(filePath);
+            string content = File.ReadAllText(filePath);
             lineList = content.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
         }
         catch (Exception ex)
@@ -48,10 +47,10 @@ public class ERBParser
             else if (lineString.StartsWith("@"))
             {
                 int start = lineString.IndexOf("(");
-                int end = lineString.IndexOf(")", start);
+                int end = start != -1 ? lineString.IndexOf(")", start) : -1;
                 // 函数在定义时要么只出现一对括号，要么没有括号而是用逗号划分
                 // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
-                if (start < end && start != 0)
+                if (start != -1 && start < end)
                 {
                     string args = lineString.Substring(start + 1, end - start - 1);
                     varNameList.AddRange(args.Split(',')
@@ -60,7 +59,7 @@ public class ERBParser
                 }
                 else
                 {
-                    var enumer = lineString.Substring(start + 1, end - start - 1).Split(',')
+                    var enumer = lineString.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
                     // enumer.FirstOrDefault()是函数名，不需要翻译
