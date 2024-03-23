@@ -9,7 +9,7 @@ public class ERBParser
     // 正则匹配输出指令的右值
     private static readonly Regex EraOutputPattern = new Regex(
         @"(PRINT|PRINTSINGLE|PRINTC|PRINTDATA|PRINTBUTTON|PRINTPLAIN)(?:FORM|FORMS)?(?:K|D)?(?:L|W)?\s*(?<modifier>[|].*)?\s*(?<value>.*)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled);
 
     // 匹配系统变量，这些变量不会丢给译者翻译
     private static readonly string[] OriginVarName = new[]
@@ -77,7 +77,14 @@ public class ERBParser
                     var enumer = lineString.Split(' ')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                    varNameList.Add(enumer.LastOrDefault());
+                    // 大意了，怎么还有"#DIM Array,6"这种写法
+                    var name = enumer.LastOrDefault();
+                    int index = name.IndexOf(",");
+                    if (index > -1)
+                    {
+                        name = name.Substring(0, index);
+                    }
+                    varNameList.Add(name);
                 }
                 // 有等号的话，还要额外获取右值。右值可能是数字、字符串，可能会用逗号分隔。
                 // 字符串型可能会以"'="的方式赋值，不过变量在声明时无法引用，所以不必裁剪左值末尾的单引号
@@ -188,7 +195,7 @@ public class ERBParser
         return int.TryParse(str, out int n) && n >= 0;
     }
 
-        public void DebugPrint()
+    public void DebugPrint()
     {
         Console.WriteLine("======变量名======");
         foreach (var item in VarNameListSplit(varNameList))
