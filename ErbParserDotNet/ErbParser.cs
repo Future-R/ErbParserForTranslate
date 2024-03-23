@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 public class ERBParser
 {
     // 正则匹配输出指令的右值
+    // 很奇怪"PRINTBUTTON @"【抽卡！】",1"会匹配到"BUTTON @"【抽卡！】"而不是"@"【抽卡！】"
+    // 正则真的很难维护捏
     private static readonly Regex EraOutputPattern = new Regex(
         @"(PRINT|PRINTSINGLE|PRINTC|PRINTDATA|PRINTBUTTON|PRINTPLAIN)(?:FORM|FORMS)?(?:K|D)?(?:L|W)?\s*(?<modifier>[|].*)?\s*(?<value>.*)",
         RegexOptions.Compiled);
