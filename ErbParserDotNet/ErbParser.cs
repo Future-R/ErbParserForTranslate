@@ -87,8 +87,7 @@ public class ERBParser
                 if (eqIndex == -1)
                 {
                     var enumer = lineString.Split(' ')
-                        .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                        .Select(arg => arg.Trim());
+                        .Where(arg => !string.IsNullOrWhiteSpace(arg));
                     // 大意了，怎么还有"#DIM Array,6"这种写法
                     var name = enumer.LastOrDefault();
                     int index = name.IndexOf(",");
@@ -106,8 +105,7 @@ public class ERBParser
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
 
                     var leftEnumer = leftValue.Split(' ')
-                        .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                        .Select(arg => arg.Trim());
+                        .Where(arg => !string.IsNullOrWhiteSpace(arg));
                     varNameList.Add(leftEnumer.LastOrDefault());
 
                     // 类型推导，如果是数值型，那么右值不用翻译，continue掉
@@ -241,7 +239,8 @@ public class ERBParser
     // 是否需要剔除当前文件的变量名，待观察
     List<string> TextListFilter(List<string> originalList)
     {
-        return originalList.Except(OriginVarName).ToList();
+        return originalList.Except(OriginVarName).
+            Where(text => !string.IsNullOrWhiteSpace(text)).ToList();
     }
 
     /// <summary>

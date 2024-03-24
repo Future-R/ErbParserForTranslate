@@ -12,25 +12,18 @@ public static class Start
     public static void Main()
     {
         Console.WriteLine("请拖入游戏根目录：");
-        // 统计耗时
-        Stopwatch stopwatch = new Stopwatch();
-
-        stopwatch.Start();
+        
         ReadFile(Console.ReadLine().Trim('"'));
 
-        stopwatch.Stop();
-        TimeSpan ts = stopwatch.Elapsed;
-
-        // 格式化并输出耗时
-        string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
-            ts.Hours, ts.Minutes, ts.Seconds,
-            ts.Milliseconds / 10);
-        Console.WriteLine("耗时：" + elapsedTime);
         Console.ReadKey();
     }
 
     static void ReadFile(string path)
     {
+        // 统计耗时
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
         // 处理CSV
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
@@ -47,19 +40,26 @@ public static class Start
         {
             var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
             .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
-            foreach (string fileName in erbNames)
+            Parallel.ForEach(erbNames, fileName =>
             {
-
                 ERBParser parser = new ERBParser();
                 parser.ParseFile(fileName);
-                parser.DebugPrint();
-
-            }
+                //parser.DebugPrint();
+            });
         }
         else
         {
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
+
+        stopwatch.Stop();
+        TimeSpan ts = stopwatch.Elapsed;
+
+        // 格式化并输出耗时
+        string elapsedTime = String.Format("{0:00}:{1:00}.{2:00}",
+            ts.Minutes, ts.Seconds,
+            ts.Milliseconds / 10);
+        Console.WriteLine("耗时：" + elapsedTime);
     }
 }
 
