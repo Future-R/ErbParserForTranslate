@@ -11,19 +11,57 @@ public static class Start
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
     public static void Main()
     {
-        // 清理上次生成的文件
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
+
+        while (true)
+        {
+            // 主菜单
+            Console.WriteLine("请输入序号并回车（默认为0）：");
+            Console.WriteLine("0.用字典汉化游戏（TODO）\n1.提取文本到字典\n2.补充新版本条目到字典（TODO）\n3.从已汉化本体中提取字典（WIP）");
+            string command = Console.ReadLine();
+            switch (command)
+            {
+                case "0":
+                    break;
+                case "1":
+                    ReadFile(appPath);
+                    break;
+                case "2":
+                    break;
+                case "3":
+                    break;
+                case "4":
+                    break;
+                default:
+                    break;
+            }
+
+            Console.ReadKey();
+            Console.Clear();
+        }
+    }
+
+    /// <summary>
+    /// 用字典汉化游戏
+    /// </summary>
+    static void Translator()
+    {
+        // TODO
+    }
+    /// <summary>
+    /// 提取文本到字典
+    /// </summary>
+    /// <param name="appPath"></param>
+    /// <exception cref="DirectoryNotFoundException"></exception>
+    static void ReadFile(string appPath)
+    {
+        // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
         if (Directory.Exists(Path.Combine(appPath, "CSV"))) Directory.Delete(Path.Combine(appPath, "CSV"), true);
         if (Directory.Exists(Path.Combine(appPath, "ERB"))) Directory.Delete(Path.Combine(appPath, "ERB"), true);
 
         Console.WriteLine("请拖入游戏根目录：");
-        ReadFile(Console.ReadLine().Trim('"'), appPath);
+        string path = Console.ReadLine().Trim('"');
 
-        Console.ReadKey();
-    }
-
-    static void ReadFile(string path, string appPath)
-    {
         // 统计耗时
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
