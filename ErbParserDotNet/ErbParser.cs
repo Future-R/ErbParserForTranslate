@@ -263,7 +263,7 @@ public class ERBParser
     {
         // 合并变量名和文本项目
         var allItems = VarNameListSplit(varNameList).Concat(VarNameListSplit(textList));
-        List<JObject> PTJsonObjList = allItems.Select((item, index) =>
+        var PTJsonObjList = allItems.Select((item, index) =>
         {
             return new JObject
             {
@@ -272,10 +272,12 @@ public class ERBParser
                 ["original"] = item,
                 ["translation"] = ""
             };
-        }).ToList();
-
-        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
-        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+        });
+        if (PTJsonObjList.Count() > 0)
+        {
+            string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
+            File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+        }
     }
 
 
