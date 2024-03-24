@@ -9,17 +9,11 @@ using System.Text.RegularExpressions;
 
 public class ERBParser
 {
-    // 正则匹配输出指令的右值
-    // 正则真的很难维护捏
-    private static readonly Regex EraOutputPattern = new Regex(
-        @"(PRINT|PRINTSINGLE|PRINTC|PRINTDATA)(?:FORM|FORMS)?(?:K|D)?(?:L|W)?\s*(?<modifier>[|].*)?\s*(?<value>.*)",
-        RegexOptions.Compiled);
-
     // 匹配系统变量，这些变量不会丢给译者翻译
     // 系统全局变量几乎不会引用，就先不放进来影响性能了
     private static readonly string[] OriginVarName = new[]
     {
-        "LOCAL", "LOCALS", "ARG", "ARGS", "RESULT", "RESULTS", "COUNT"
+        "LOCAL", "LOCALS", "ARG", "ARGS", "RESULT", "RESULTS", "COUNT", "RAND", "CHARANUM"
     };
 
 
@@ -145,6 +139,13 @@ public class ERBParser
                 var rightValue = lineString.Substring(4).Trim();
                 if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
             }
+            // 匹配判别式
+            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).Trim();
+                textList.Add(rightValue);
+            }
             // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值
             else if (lineString.StartsWith("RETURN"))
             {
@@ -181,8 +182,8 @@ public class ERBParser
                     }
                 }
             }
-            // PRINTPLAIN，保证右值不会被解析成代码。可用的修饰符为 |FORM
-            else if (lineString.StartsWith("PRINTPLAIN"))
+            // PRINT系，右值丢给译者
+            else if (lineString.StartsWith("PRINT"))
             {
                 int spIndex = lineString.IndexOf(" ");
                 if (spIndex == -1)
@@ -211,18 +212,6 @@ public class ERBParser
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
                     varNameList.Add(leftValue);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
-                }
-                // 匹配输出
-                // 懒得手写了，用正则先跑起来再说
-                else
-                {
-                    MatchCollection matches = EraOutputPattern.Matches(lineString);
-                    foreach (Match match in matches)
-                    {
-                        string value = match.Groups["value"].Value.Trim();
-                        //textList.Add("【正则】" + value);
-                        textList.Add(value);
-                    }
                 }
             }
         }
