@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 public class ERBParser
@@ -261,25 +262,37 @@ public class ERBParser
     /// <param name="relativePath">相对路径</param>
     public void WriteJson(string targetFile, string relativePath)
     {
-        // 合并变量名和文本项目
-        var allItems = VarNameListSplit(varNameList).Concat(VarNameListSplit(textList));
-        var PTJsonObjList = allItems.Select((item, index) =>
+        var allObjs = new List<JObject>();
+
+        AddObjsForType("变量", varNameList, allObjs, relativePath);
+        AddObjsForType("文本", textList, allObjs, relativePath);
+
+        if (allObjs.Count > 0)
+        {
+            string jsonContent = JsonConvert.SerializeObject(allObjs, Formatting.Indented);
+            File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+        }
+    }
+    // 键值是 类型 + 相对路径(去除后缀) + 四位数字ID
+    // 类型有 变量 和 文本，将来替换的时候，如果变量没有翻译，会从其他已翻译的变量里找翻译
+    // 将来还能做检查，如果有变量翻译的不一样，提前报warning
+    private void AddObjsForType(string type, List<string> nameList, List<JObject> objs, string relativePath)
+    {
+        var newObjs = VarNameListSplit(nameList).Select((item, index) =>
         {
             return new JObject
             {
-                // 键值是相对路径(去除后缀)+四位数字ID
-                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(4, '0'),
+                ["key"] = new StringBuilder(type)
+                    .Append(Path.ChangeExtension(relativePath, ""))
+                    .Append(index.ToString().PadLeft(4, '0'))
+                    .ToString(),
                 ["original"] = item,
                 ["translation"] = ""
             };
         });
-        if (PTJsonObjList.Count() > 0)
-        {
-            string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
-            File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
-        }
-    }
 
+        objs.AddRange(newObjs);
+    }
 
     public void DebugPrint()
     {
