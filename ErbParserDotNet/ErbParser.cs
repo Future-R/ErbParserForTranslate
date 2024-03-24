@@ -267,20 +267,41 @@ public class ERBParser
     // 将来还能做检查，如果有变量翻译的不一样，提前报warning
     private void AddObjsForType(string type, List<string> nameList, List<JObject> objs, string relativePath)
     {
-        var newObjs = VarNameListSplit(nameList).Select((item, index) =>
+        if (type == "文本")
         {
-            return new JObject
+            var newObjs = TextListFilter(nameList).Select((item, index) =>
             {
-                ["key"] = new StringBuilder(type)
-                    .Append(Path.ChangeExtension(relativePath, ""))
-                    .Append(index.ToString().PadLeft(4, '0'))
-                    .ToString(),
-                ["original"] = item,
-                ["translation"] = ""
-            };
-        });
+                return new JObject
+                {
+                    ["key"] = new StringBuilder(type)
+                        .Append(Path.ChangeExtension(relativePath, ""))
+                        .Append(index.ToString().PadLeft(4, '0'))
+                        .ToString(),
+                    ["original"] = item,
+                    ["translation"] = ""
+                };
+            });
+            objs.AddRange(newObjs);
+        }
+        else
+        {
+            var newObjs = VarNameListSplit(nameList).Select((item, index) =>
+            {
+                return new JObject
+                {
+                    ["key"] = new StringBuilder(type)
+                        .Append(Path.ChangeExtension(relativePath, ""))
+                        .Append(index.ToString().PadLeft(4, '0'))
+                        .ToString(),
+                    ["original"] = item,
+                    ["translation"] = ""
+                };
+            });
+            objs.AddRange(newObjs);
+        }
+        
 
-        objs.AddRange(newObjs);
+        
     }
 
     public void DebugPrint()
