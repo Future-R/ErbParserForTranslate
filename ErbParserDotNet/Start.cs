@@ -11,14 +11,15 @@ public static class Start
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
     public static void Main()
     {
+        string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
+
         Console.WriteLine("请拖入游戏根目录：");
-        
-        ReadFile(Console.ReadLine().Trim('"'));
+        ReadFile(Console.ReadLine().Trim('"'), appPath);
 
         Console.ReadKey();
     }
 
-    static void ReadFile(string path)
+    static void ReadFile(string path, string appPath)
     {
         // 统计耗时
         Stopwatch stopwatch = new Stopwatch();
@@ -38,13 +39,22 @@ public static class Start
         }
         if (Directory.Exists(erbDirectory))
         {
+            // 获取所有erb和erh文件
             var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
             .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
-            Parallel.ForEach(erbNames, fileName =>
+
+            Parallel.ForEach(erbNames, erbName =>
             {
+                // 获取相对路径
+                var relativePath = erbName.Substring(path.Length + 1);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
                 ERBParser parser = new ERBParser();
-                parser.ParseFile(fileName);
+                parser.ParseFile(erbName);
                 //parser.DebugPrint();
+                // 在本程序目录下创建与ERA目录相同结构的目录
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                parser.WriteJson(targetFile, relativePath);
             });
         }
         else

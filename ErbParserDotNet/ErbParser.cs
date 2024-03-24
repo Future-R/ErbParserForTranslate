@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -252,6 +254,30 @@ public class ERBParser
     {
         return int.TryParse(str, out int n) && n >= 0;
     }
+    /// <summary>
+    /// 在本程序的目录下输出Json
+    /// </summary>
+    /// <param name="targetFile">完整路径</param>
+    /// <param name="relativePath">相对路径</param>
+    public void WriteJson(string targetFile, string relativePath)
+    {
+        // 合并变量名和文本项目
+        var allItems = VarNameListSplit(varNameList).Concat(VarNameListSplit(textList));
+        List<JObject> PTJsonObjList = allItems.Select((item, index) =>
+        {
+            return new JObject
+            {
+                // 键值是相对路径(去除后缀)+四位数字ID
+                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(4, '0'),
+                ["original"] = item,
+                ["translation"] = ""
+            };
+        }).ToList();
+
+        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
+        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+    }
+
 
     public void DebugPrint()
     {
