@@ -13,7 +13,7 @@ public class CSVParser
     List<string> valueList = new List<string>();
     public void ParseFile(string filePath)
     {
-        var lines = File.ReadAllLines(filePath, Start.fileEncoding);
+        var lines = File.ReadAllLines(filePath, Configs.fileEncoding);
         foreach (var line in lines)
         {
             // 修剪行末注释，刚刚知道原来括号也是注释

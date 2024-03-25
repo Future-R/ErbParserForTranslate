@@ -13,12 +13,13 @@ public static class Start
 {
     // 之后从配置json里读取
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
-    static readonly HashSet<string> extensions = new HashSet<string> { ".csv", ".CSV", ".erb", ".ERB", ".erh", ".ERH" };
-    //public static readonly Encoding fileEncoding = Encoding.GetEncoding("EUC-JP");
-    public static readonly Encoding fileEncoding = Encoding.GetEncoding("UTF-8");
+    
     public static void Main()
     {
+        // 读取config.json配置
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
+
+        Configs.Init();
         Tools.Init();
 
         while (true)
@@ -75,7 +76,7 @@ public static class Start
             var targetFile = Path.Combine(gameDirectory, relativePath);
 
             // 遍历所有可能的扩展，后悔之前多手把扩展截掉了，现在想改稍微有点麻烦
-            foreach (var ext in extensions)
+            foreach (var ext in Configs.extensions)
             {
                 string newFile = Path.ChangeExtension(targetFile, ext);
                 if (File.Exists(newFile))
@@ -111,7 +112,7 @@ public static class Start
                 {
                     JArray jsonArray = JArray.Parse(ptJsonContent);
                     // 读取游戏脚本
-                    string scriptContent = File.ReadAllText(targetFile, fileEncoding);
+                    string scriptContent = File.ReadAllText(targetFile, Configs.fileEncoding);
                     // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
                     var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
                     foreach (JObject dictObj in dictObjs)
@@ -138,6 +139,10 @@ public static class Start
             ts.Milliseconds / 10);
         Console.WriteLine("耗时：" + elapsedTime);
         Console.WriteLine("翻译已完成！");
+        if (Configs.autoOpenFolder)
+        {
+            Process.Start(gameDirectory);
+        }
     }
     /// <summary>
     /// 提取字典
@@ -260,6 +265,10 @@ public static class Start
             ts.Milliseconds / 10);
         Console.WriteLine("耗时：" + elapsedTime);
         Console.WriteLine("已将生成的JSON放置在此程序目录下");
+        if (Configs.autoOpenFolder)
+        {
+            Process.Start(appPath);
+        }
     }
 }
 

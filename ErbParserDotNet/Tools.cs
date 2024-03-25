@@ -57,4 +57,14 @@ public static class Tools
 
         sysArrayFilter = new Regex($"^{kw_variable}(:{kw_variable}){{0,2}}$", RegexOptions.Compiled);
     }
+
+    /// <summary>
+    /// 判断字符串是否完全是ERA变量（XX:YY:ZZ形式）
+    /// </summary>
+    /// <param name="text"></param>
+    /// <returns></returns>
+    public static bool IsArray(string text)
+    {
+        return Configs.forceFilter ? engArrayFilter.IsMatch(text) : sysArrayFilter.IsMatch(text);
+    }
 }

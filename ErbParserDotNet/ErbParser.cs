@@ -18,7 +18,7 @@ public class ERBParser
     {
         try
         {
-            string content = File.ReadAllText(filePath, Start.fileEncoding);
+            string content = File.ReadAllText(filePath, Configs.fileEncoding);
             lineList = content.Replace(Environment.NewLine, "\n").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
         }
         catch (Exception ex)
@@ -233,7 +233,7 @@ public class ERBParser
     List<string> VarNameListFilter(List<string> originalList)
     {
         return originalList.Distinct()
-            .Where(token => !Tools.engArrayFilter.IsMatch(token) && !IsNaturalNumber(token))
+            .Where(token => !Tools.IsArray(token) && !IsNaturalNumber(token))
             .ToList();
     }
     // 剔除系统内置变量名
@@ -242,7 +242,7 @@ public class ERBParser
     {
         return originalList
             .Distinct()
-            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.engArrayFilter.IsMatch(token))
+            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token))
             .ToList();
     }
 
