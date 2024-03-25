@@ -141,7 +141,7 @@ public class ERBParser
                 if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
             }
             // 匹配判别式
-            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF "))
+            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF "))
             {
                 int spIndex = lineString.IndexOf(" ");
                 string rightValue = lineString.Substring(spIndex).Trim();

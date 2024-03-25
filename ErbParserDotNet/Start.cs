@@ -25,7 +25,7 @@ public static class Start
         {
             // 主菜单
             Console.WriteLine("请输入序号并回车（默认为0）：");
-            Console.WriteLine("[0] - 用字典汉化游戏（WIP）\n[1] - 提取文本到字典\n[2] - 补充新版本条目到字典（TODO）\n[3] - 从已汉化本体中提取字典");
+            Console.WriteLine("[0] - 用字典汉化游戏\n[1] - 提取文本到字典\n[2] - 补充新版本条目到字典（TODO）\n[3] - 从已汉化本体中提取字典");
             string command = Console.ReadLine();
             switch (command)
             {
