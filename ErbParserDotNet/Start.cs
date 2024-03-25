@@ -5,13 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 public static class Start
 {
+    
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
     public static void Main()
     {
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
+        Tools.Init();
 
         while (true)
         {

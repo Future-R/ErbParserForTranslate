@@ -9,18 +9,6 @@ using System.Text.RegularExpressions;
 
 public class ERBParser
 {
-    // 匹配系统变量，这些变量不会丢给译者翻译
-    // 系统全局变量几乎不会引用，就先不放进来影响性能了
-    private static readonly string[] OriginVarName = new[]
-    {
-        "ARG", "ARGS",
-        "LOCAL", "LOCALS",
-        "RESULT", "RESULTS",
-        "GLOBAL", "GLOBALS",
-        "COUNT", "RAND", "CHARANUM"
-    };
-
-
     // 想了想，反正单纯只是提取文本，不需要Execute，所以只需要逐行提取，不需要保存结构
     List<string> lineList = new List<string>();
     List<string> varNameList = new List<string>();
@@ -31,7 +19,7 @@ public class ERBParser
         try
         {
             string content = File.ReadAllText(filePath);
-            lineList = content.Split(new[] { Environment.NewLine }, StringSplitOptions.None).ToList();
+            lineList = content.Replace(Environment.NewLine, "\n").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
         }
         catch (Exception ex)
         {
@@ -76,9 +64,17 @@ public class ERBParser
                     var enumer = lineString.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                    // enumer.FirstOrDefault()是函数名，不需要翻译
+                    // enumer.FirstOrDefault()是函数名，不需要翻译，所以SKIP(1)
                     // 其它成员是参数名
-                    varNameList.AddRange(enumer.Skip(1));
+                    foreach (var token in enumer.Skip(1))
+                    {
+                        string[] parts = token.Split('=');
+                        varNameList.Add(parts[0].Trim());
+                        if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
+                        {
+                            textList.Add(parts[1].Trim());
+                        }
+                    }
                 }
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
@@ -198,6 +194,7 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 textList.Add(rightValue);
             }
+            // 包含匹配
             else
             {
                 // 匹配赋值，左值一定是变量，右值直接扔给译者算了
@@ -213,7 +210,16 @@ public class ERBParser
                 if (lineString.Contains(" '= "))
                 {
                     int eqIndex = lineString.IndexOf("=");
-                    string leftValue = lineString.Substring(0, eqIndex).Trim().TrimEnd('\'');
+                    string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
+                    string rightValue = lineString.Substring(eqIndex + 1).Trim();
+                    varNameList.Add(leftValue);
+                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                }
+                // 匹配+=和-=赋值，左值一定是变量，右值直接扔给译者算了
+                if (lineString.Contains("+="))
+                {
+                    int eqIndex = lineString.IndexOf("=");
+                    string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
                     varNameList.Add(leftValue);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
@@ -222,22 +228,22 @@ public class ERBParser
         }
     }
 
-    // 将变量名按:拆分，剔除自然数，合并重复成员，剔除系统内置变量名
-    List<string> VarNameListSplit(List<string> originalList)
+    // 合并重复成员，过滤系统变量和纯数字
+    // 括号的特殊处理：没想好怎么处理，先按有括号就不拆的做法
+    List<string> VarNameListFilter(List<string> originalList)
     {
-        List<string> splitList = new List<string>();
-        foreach (string item in originalList)
-        {
-            splitList.AddRange(item.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries));
-        }
-        return splitList.Distinct().Where(s => !IsNaturalNumber(s)).Except(OriginVarName).ToList();
+        return originalList.Distinct()
+            .Where(token => !Tools.engArrayFilter.IsMatch(token) && !IsNaturalNumber(token))
+            .ToList();
     }
     // 剔除系统内置变量名
     // 是否需要剔除当前文件的变量名，待观察
     List<string> TextListFilter(List<string> originalList)
     {
-        return originalList.Except(OriginVarName).
-            Where(text => !string.IsNullOrWhiteSpace(text)).ToList();
+        return originalList
+            .Distinct()
+            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.engArrayFilter.IsMatch(token))
+            .ToList();
     }
 
     /// <summary>
@@ -290,7 +296,7 @@ public class ERBParser
         }
         else
         {
-            var newObjs = VarNameListSplit(nameList).Select((item, index) =>
+            var newObjs = VarNameListFilter(nameList).Select((item, index) =>
             {
                 return new JObject
                 {
@@ -304,15 +310,12 @@ public class ERBParser
             });
             objs.AddRange(newObjs);
         }
-        
-
-        
     }
 
     public void DebugPrint()
     {
         Console.WriteLine("======变量名======");
-        foreach (var item in VarNameListSplit(varNameList))
+        foreach (var item in VarNameListFilter(varNameList))
         {
             Console.WriteLine(item);
         }

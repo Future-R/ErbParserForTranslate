@@ -40,7 +40,7 @@ public class CSVParser
     /// <param name="relativePath">相对路径</param>
     public void WriteJson(string targetFile, string relativePath)
     {
-        var PTJsonObjList = valueList.Select((item, index) =>
+        var PTJsonObjList = valueList.Distinct().Select((item, index) =>
         {
             return new JObject
             {
