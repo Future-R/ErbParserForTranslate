@@ -18,7 +18,7 @@ public class ERBParser
     {
         try
         {
-            string content = File.ReadAllText(filePath);
+            string content = File.ReadAllText(filePath, Start.fileEncoding);
             lineList = content.Replace(Environment.NewLine, "\n").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
         }
         catch (Exception ex)

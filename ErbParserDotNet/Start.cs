@@ -6,11 +6,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 public static class Start
 {
-
+    // 之后从配置json里读取
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
+    static readonly HashSet<string> extensions = new HashSet<string> { ".csv", ".CSV", ".erb", ".ERB", ".erh", ".ERH" };
+    //public static readonly Encoding fileEncoding = Encoding.GetEncoding("EUC-JP");
+    public static readonly Encoding fileEncoding = Encoding.GetEncoding("UTF-8");
     public static void Main()
     {
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
@@ -20,11 +25,12 @@ public static class Start
         {
             // 主菜单
             Console.WriteLine("请输入序号并回车（默认为0）：");
-            Console.WriteLine("0.用字典汉化游戏（TODO）\n1.提取文本到字典\n2.补充新版本条目到字典（TODO）\n3.从已汉化本体中提取字典（WIP）");
+            Console.WriteLine("[0] - 用字典汉化游戏（WIP）\n[1] - 提取文本到字典\n[2] - 补充新版本条目到字典（TODO）\n[3] - 从已汉化本体中提取字典");
             string command = Console.ReadLine();
             switch (command)
             {
                 case "0":
+                    Translator();
                     break;
                 case "1":
                     ReadFile(appPath);
@@ -35,6 +41,7 @@ public static class Start
                     ReadFile(appPath, true);
                     break;
                 default:
+                    Translator();
                     break;
             }
 
@@ -48,7 +55,89 @@ public static class Start
     /// </summary>
     static void Translator()
     {
-        // TODO
+        Console.WriteLine("请拖入需要汉化的游戏根目录（请做好备份）：");
+        string gameDirectory = Console.ReadLine().Trim('"');
+        Console.WriteLine("请拖入放置CSV和ERB目录的译文目录：");
+        string transFileDirectory = Console.ReadLine().Trim('"');
+
+        // 统计耗时
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        // 遍历所有译文JSON
+        Parallel.ForEach(Directory.GetFiles(transFileDirectory, "*.json", SearchOption.AllDirectories), (jsonFile) =>
+        {
+            // 获取相对路径
+            var relativePath = jsonFile.Substring(transFileDirectory.Length + 1);
+            bool isCSV = relativePath.StartsWith("CSV");
+            bool fileExist = false;
+            // 得到输出路径
+            var targetFile = Path.Combine(gameDirectory, relativePath);
+
+            // 遍历所有可能的扩展，后悔之前多手把扩展截掉了，现在想改稍微有点麻烦
+            foreach (var ext in extensions)
+            {
+                string newFile = Path.ChangeExtension(targetFile, ext);
+                if (File.Exists(newFile))
+                {
+                    // 得到输出文件后缀
+                    targetFile = newFile;
+                    fileExist = true;
+                    break;
+                }
+            }
+            // 如果目标脚本不存在，跳过这一条并报错
+            if (!fileExist)
+            {
+                if (isCSV)
+                {
+                    Console.WriteLine($"【错误】：没找到{targetFile}.CSV！");
+                }
+                else
+                {
+                    Console.WriteLine($"【错误】：没找到{targetFile}的ERB脚本！");
+                }
+            }
+            else
+            {
+                // 读取pt译文
+                string ptJsonContent = File.ReadAllText(jsonFile);
+                // pt的json都是[起头的，如果不是，那就跳过这个文件
+                if (!ptJsonContent.StartsWith("["))
+                {
+                    Console.WriteLine($"【错误】：{jsonFile}无法被正确解析！");
+                }
+                else
+                {
+                    JArray jsonArray = JArray.Parse(ptJsonContent);
+                    // 读取游戏脚本
+                    string scriptContent = File.ReadAllText(targetFile, fileEncoding);
+                    // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
+                    var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
+                    foreach (JObject dictObj in dictObjs)
+                    {
+                        string key = dictObj["original"].ToString();
+                        string value = dictObj["translation"].ToString();
+                        // stage：-1已隐藏; 0未翻译；1已翻译；2有疑问；3已检查; 5已审核；9已锁定
+                        if (dictObj["stage"].ToObject<int>() > 0)
+                        {
+                            scriptContent = scriptContent.Replace(key, value);
+                        }
+                    }
+                    // 覆盖写入
+                    File.WriteAllText(targetFile, scriptContent);
+                }
+            }
+        });
+
+        // 格式化并输出耗时
+        stopwatch.Stop();
+        TimeSpan ts = stopwatch.Elapsed;
+        string elapsedTime = String.Format("{0:00}秒{1:00}",
+            ts.Seconds,
+            ts.Milliseconds / 10);
+        Console.WriteLine("耗时：" + elapsedTime);
+        Console.WriteLine("翻译已完成！");
     }
     /// <summary>
     /// 提取字典
@@ -163,10 +252,9 @@ public static class Start
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
 
+        // 格式化并输出耗时
         stopwatch.Stop();
         TimeSpan ts = stopwatch.Elapsed;
-
-        // 格式化并输出耗时
         string elapsedTime = String.Format("{0:00}秒{1:00}",
             ts.Seconds,
             ts.Milliseconds / 10);
