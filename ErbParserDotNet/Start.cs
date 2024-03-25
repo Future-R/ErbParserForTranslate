@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 public static class Start
 {
-    
+
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
     public static void Main()
     {
@@ -32,8 +32,7 @@ public static class Start
                 case "2":
                     break;
                 case "3":
-                    break;
-                case "4":
+                    ReadFile(appPath, true);
                     break;
                 default:
                     break;
@@ -52,25 +51,33 @@ public static class Start
         // TODO
     }
     /// <summary>
-    /// 提取文本到字典
+    /// 提取字典
     /// </summary>
-    /// <param name="appPath"></param>
+    /// <param name="appPath">程序路径</param>
+    /// <param name="merge">合并模式：需要先后拖入原版和汉化版路径</param>
     /// <exception cref="DirectoryNotFoundException"></exception>
-    static void ReadFile(string appPath)
+    static void ReadFile(string appPath, bool merge = false)
     {
         // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
         if (Directory.Exists(Path.Combine(appPath, "CSV"))) Directory.Delete(Path.Combine(appPath, "CSV"), true);
         if (Directory.Exists(Path.Combine(appPath, "ERB"))) Directory.Delete(Path.Combine(appPath, "ERB"), true);
 
-        Console.WriteLine("请拖入游戏根目录：");
+        string mergePath = "";
+        if (merge)
+        {
+            Console.WriteLine("请拖入已经汉化的游戏根目录（作为翻译参考）：");
+            mergePath = Console.ReadLine().Trim('"');
+        }
+
+        Console.WriteLine("请拖入需要汉化的游戏根目录：");
         string path = Console.ReadLine().Trim('"');
+
+        string csvDirectory = Path.Combine(path, "CSV");
+        string erbDirectory = Path.Combine(path, "ERB");
 
         // 统计耗时
         Stopwatch stopwatch = new Stopwatch();
         stopwatch.Start();
-
-        string csvDirectory = Path.Combine(path, "CSV");
-        string erbDirectory = Path.Combine(path, "ERB");
 
         if (Directory.Exists(csvDirectory))
         {
@@ -87,7 +94,25 @@ public static class Start
 
                 // 输出Json
                 Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-                parser.WriteJson(targetFile, relativePath);
+                if (merge)
+                {
+                    var referencePath = Path.Combine(mergePath, relativePath);
+                    if (File.Exists(referencePath))
+                    {
+                        CSVParser referenceParser = new CSVParser();
+                        referenceParser.ParseFile(referencePath);
+                        parser.WriteJson(targetFile, relativePath, referenceParser.GetList());
+                    }
+                    else
+                    {
+                        Console.WriteLine($"【警告】：未能找到{referencePath}！");
+                        parser.WriteJson(targetFile, relativePath);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
             });
         }
         else
@@ -112,7 +137,25 @@ public static class Start
 
                 // 输出Json
                 Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-                parser.WriteJson(targetFile, relativePath);
+                if (merge)
+                {
+                    var referencePath = Path.Combine(mergePath, relativePath);
+                    if (File.Exists(referencePath))
+                    {
+                        ERBParser referenceParser = new ERBParser();
+                        referenceParser.ParseFile(referencePath);
+                        parser.WriteJson(targetFile, relativePath, referenceParser.GetListTuple());
+                    }
+                    else
+                    {
+                        Console.WriteLine($"【警告】：未能找到{referencePath}！");
+                        parser.WriteJson(targetFile, relativePath);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
             });
         }
         else

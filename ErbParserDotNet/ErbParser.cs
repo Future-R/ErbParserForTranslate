@@ -273,14 +273,33 @@ public class ERBParser
             File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
         }
     }
+
+    public void WriteJson(string targetFile, string relativePath, (List<string>, List<string>) referTuple)
+    {
+        // 解包元组，得到参考用的两个列表
+        List<string> referVarNameList = referTuple.Item1;
+        List<string> referTextList = referTuple.Item2;
+
+        var allObjs = new List<JObject>();
+
+        AddObjsForType("变量", varNameList, allObjs, relativePath, referVarNameList);
+        AddObjsForType("文本", textList, allObjs, relativePath, referTextList);
+
+        if (allObjs.Count > 0)
+        {
+            string jsonContent = JsonConvert.SerializeObject(allObjs, Formatting.Indented);
+            File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+        }
+    }
+
     // 键值是 类型 + 相对路径(去除后缀) + 四位数字ID
     // 类型有 变量 和 文本，将来替换的时候，如果变量没有翻译，会从其他已翻译的变量里找翻译
     // 将来还能做检查，如果有变量翻译的不一样，提前报warning
-    private void AddObjsForType(string type, List<string> nameList, List<JObject> objs, string relativePath)
+    private void AddObjsForType(string type, List<string> originalList, List<JObject> objs, string relativePath)
     {
         if (type == "文本")
         {
-            var newObjs = TextListFilter(nameList).Select((item, index) =>
+            var newObjs = TextListFilter(originalList).Select((item, index) =>
             {
                 return new JObject
                 {
@@ -296,7 +315,7 @@ public class ERBParser
         }
         else
         {
-            var newObjs = VarNameListFilter(nameList).Select((item, index) =>
+            var newObjs = VarNameListFilter(originalList).Select((item, index) =>
             {
                 return new JObject
                 {
@@ -310,6 +329,61 @@ public class ERBParser
             });
             objs.AddRange(newObjs);
         }
+    }
+
+    private void AddObjsForType(string type, List<string> originalList, List<JObject> objs, string relativePath, List<string> referenceList)
+    {
+        // 条数相等不一定匹配，但不相等肯定不匹配
+        if (originalList.Count == referenceList.Count)
+        {
+            var originObjs = type == "文本" ? TextListFilter(originalList) : VarNameListFilter(originalList);
+            var referenceObjs = type == "文本" ? TextListFilter(referenceList) : VarNameListFilter(referenceList);
+            // 二次检查
+            if (originObjs.Count == referenceObjs.Count)
+            {
+                for (int index = 0; index < originObjs.Count; index++)
+                {
+                    // 如果对比发现，参考和原版不一致，那么把参考的值填进translation
+                    if (originObjs[index] != referenceObjs[index])
+                    {
+                        objs.Add(new JObject
+                        {
+                            // 键值是 类型 + 相对路径(去除后缀) + 四位数字ID
+                            ["key"] = new StringBuilder(type)
+                            .Append(Path.ChangeExtension(relativePath, ""))
+                            .Append(index.ToString().PadLeft(4, '0'))
+                            .ToString(),
+                            ["original"] = originObjs[index],
+                            ["translation"] = referenceObjs[index]
+                        });
+                    }
+                    else
+                    {
+                        objs.Add(new JObject
+                        {
+                            ["key"] = new StringBuilder(type)
+                            .Append(Path.ChangeExtension(relativePath, ""))
+                            .Append(index.ToString().PadLeft(4, '0'))
+                            .ToString(),
+                            ["original"] = originObjs[index],
+                            ["translation"] = ""
+                        });
+                    }
+                }
+                return;
+            }
+        }
+        Console.WriteLine($"【警告】：跳过了填充{relativePath}{type}。");
+        // 改用常规模式
+        AddObjsForType(type, originalList, objs, relativePath);
+    }
+    /// <summary>
+    /// 返回varNameList和textList
+    /// </summary>
+    /// <returns></returns>
+    public (List<string> name, List<string> text) GetListTuple()
+    {
+        return (name: varNameList, text: textList);
     }
 
     public void DebugPrint()
