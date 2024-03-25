@@ -16,9 +16,11 @@ public class CSVParser
         var lines = File.ReadAllLines(filePath);
         foreach (var line in lines)
         {
-            // 修剪行末注释
-            var index = line.IndexOf(';');
-            string contentWithoutComment = index != -1 ? line.Substring(0, index) : line;
+            // 修剪行末注释，刚刚知道原来括号也是注释
+            var indexA = line.IndexOf(';');
+            var contentWithoutComment = indexA != -1 ? line.Substring(0, indexA) : line;
+            var indexB = contentWithoutComment.IndexOf('(');
+            contentWithoutComment = indexB != -1 ? contentWithoutComment.Substring(0, indexB) : contentWithoutComment;
 
             // 分割每一行的内容
             var parts = contentWithoutComment.Split(',');

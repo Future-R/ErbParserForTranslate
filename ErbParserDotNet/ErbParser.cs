@@ -13,7 +13,11 @@ public class ERBParser
     // 系统全局变量几乎不会引用，就先不放进来影响性能了
     private static readonly string[] OriginVarName = new[]
     {
-        "LOCAL", "LOCALS", "ARG", "ARGS", "RESULT", "RESULTS", "COUNT", "RAND", "CHARANUM"
+        "ARG", "ARGS",
+        "LOCAL", "LOCALS",
+        "RESULT", "RESULTS",
+        "GLOBAL", "GLOBALS",
+        "COUNT", "RAND", "CHARANUM"
     };
 
 
@@ -43,7 +47,8 @@ public class ERBParser
             // 后续一切处理都是以注释已被筛掉为前提
             if (lineString.StartsWith(";")) continue;
             // 匹配函数
-            else if (lineString.StartsWith("@"))
+            // 之前只匹配了@，现在补充CALL和TRYCALL
+            else if (lineString.StartsWith("@") || lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL"))
             {
                 int start = lineString.IndexOf("(");
                 int end = start != -1 ? lineString.IndexOf(")", start) : -1;
