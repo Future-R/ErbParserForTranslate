@@ -158,7 +158,7 @@ public class ERBParser
                     {
                         textList.Add(rightValue);
                     }
-                    else
+                    else if (rightValue.Length > 0)
                     {
                         varNameList.Add(rightValue);
                     }
