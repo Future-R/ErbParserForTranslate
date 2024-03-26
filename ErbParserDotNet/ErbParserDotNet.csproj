@@ -49,6 +49,7 @@
     <Compile Include="CsvParser.cs" />
     <Compile Include="Configs.cs" />
     <Compile Include="ErbParser.cs" />
+    <Compile Include="ExpressionParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Start.cs" />
     <Compile Include="Tools.cs" />

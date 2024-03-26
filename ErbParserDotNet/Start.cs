@@ -54,6 +54,9 @@ public static class Start
                 case "5":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
+                case "999":
+                    Debug();
+                    break;
                 default:
                     Translator();
                     break;
@@ -62,6 +65,13 @@ public static class Start
             Console.ReadKey();
             Console.Clear();
         }
+    }
+
+    static void Debug()
+    {
+        var (vari, text) = ExpressionParser.Slash("3 TO 10");
+        vari.ForEach(v => Console.WriteLine($"变量【{v}】"));
+        text.ForEach(t => Console.WriteLine($"常量【{t}】"));
     }
 
     static void Settings()

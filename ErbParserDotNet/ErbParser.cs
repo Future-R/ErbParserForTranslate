@@ -134,18 +134,14 @@ public class ERBParser
                 var rightValue = lineString.Substring(10).Trim();
                 varNameList.Add(rightValue);
             }
-            // 右值不是数字就直接扔给译者
-            else if (lineString.StartsWith("CASE "))
-            {
-                var rightValue = lineString.Substring(4).Trim();
-                if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
-            }
-            // 匹配判别式
-            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF "))
+            // 匹配判别式……CASE TO暂时没想好在哪个环节筛掉比较合适，先放着
+            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF ") || lineString.StartsWith("CASE "))
             {
                 int spIndex = lineString.IndexOf(" ");
                 string rightValue = lineString.Substring(spIndex).Trim();
-                textList.Add(rightValue);
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
             }
             // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值
             else if (lineString.StartsWith("RETURN"))
