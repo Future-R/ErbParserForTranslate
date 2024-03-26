@@ -183,8 +183,34 @@ public class ERBParser
                     }
                 }
             }
-            // PRINT系，右值丢给译者
-            else if (lineString.StartsWith("PRINT"))
+            // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢
+            else if (lineString.StartsWith("PRINTV") || lineString.StartsWith("PRINTS"))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                varNameList.Add(rightValue);
+            }
+            // HTML_PRINT，右值是FORN表达式，如果有英文引号，判断为文本，否则就是变量
+            else if (lineString.StartsWith("HTML_PRINT "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                if (rightValue.Contains('"'))
+                {
+                    textList.Add(rightValue);
+                }
+                else
+                {
+                    varNameList.Add(rightValue);
+                }
+            }
+            // PRINT图像、矩形和空格，不需要翻译
+            else if (lineString.StartsWith("PRINT_IMG") || lineString.StartsWith("PRINT_RECT") || lineString.StartsWith("PRINT_SPACE"))
+            {
+                continue;
+            }
+            // 其它PRINT系，右值丢给译者
+            else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATAFORM"))
             {
                 int spIndex = lineString.IndexOf(" ");
                 if (spIndex == -1)
@@ -230,7 +256,7 @@ public class ERBParser
 
     // 合并重复成员，过滤系统变量和纯数字
     // 括号的特殊处理：没想好怎么处理，先按有括号就不拆的做法
-    List<string> VarNameListFilter(List<string> originalList)
+    public List<string> VarNameListFilter(List<string> originalList)
     {
         return originalList.Distinct()
             .Where(token => !Tools.IsArray(token) && !IsNaturalNumber(token))
@@ -238,7 +264,7 @@ public class ERBParser
     }
     // 剔除系统内置变量名
     // 是否需要剔除当前文件的变量名，待观察
-    List<string> TextListFilter(List<string> originalList)
+    public List<string> TextListFilter(List<string> originalList)
     {
         return originalList
             .Distinct()
@@ -305,7 +331,7 @@ public class ERBParser
                 {
                     ["key"] = new StringBuilder(type)
                         .Append(Path.ChangeExtension(relativePath, ""))
-                        .Append(index.ToString().PadLeft(4, '0'))
+                        .Append(index.ToString().PadLeft(5, '0'))
                         .ToString(),
                     ["original"] = item,
                     ["translation"] = ""
@@ -321,7 +347,7 @@ public class ERBParser
                 {
                     ["key"] = new StringBuilder(type)
                         .Append(Path.ChangeExtension(relativePath, ""))
-                        .Append(index.ToString().PadLeft(4, '0'))
+                        .Append(index.ToString().PadLeft(5, '0'))
                         .ToString(),
                     ["original"] = item,
                     ["translation"] = ""
@@ -348,10 +374,10 @@ public class ERBParser
                     {
                         objs.Add(new JObject
                         {
-                            // 键值是 类型 + 相对路径(去除后缀) + 四位数字ID
+                            // 键值是 类型 + 相对路径(去除后缀) + 5位数字ID
                             ["key"] = new StringBuilder(type)
                             .Append(Path.ChangeExtension(relativePath, ""))
-                            .Append(index.ToString().PadLeft(4, '0'))
+                            .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
                             ["original"] = originObjs[index],
                             ["translation"] = referenceObjs[index]
@@ -363,7 +389,7 @@ public class ERBParser
                         {
                             ["key"] = new StringBuilder(type)
                             .Append(Path.ChangeExtension(relativePath, ""))
-                            .Append(index.ToString().PadLeft(4, '0'))
+                            .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
                             ["original"] = originObjs[index],
                             ["translation"] = ""

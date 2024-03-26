@@ -11,12 +11,16 @@ using System.Threading.Tasks;
 public static class Configs
 {
     public static HashSet<string> extensions { get; private set; }
+    // 常用的有UTF-8-BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
+    // 强力过滤变量名
     public static bool forceFilter = true;
+    // 执行完毕后自动打开文件夹
     public static bool autoOpenFolder = false;
 
     public static void Init()
     {
+        // Config读取配置
         string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
         if (File.Exists(configPath))
         {

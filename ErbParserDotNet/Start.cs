@@ -13,21 +13,27 @@ public static class Start
 {
     // 之后从配置json里读取
     static readonly string[] erbExtensions = new string[] { ".erb", ".erh" };
-    
+
     public static void Main()
     {
-        // 读取config.json配置
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
-
+        // 读取config.json配置
         Configs.Init();
+        // 主要是预编译正则
         Tools.Init();
 
         while (true)
         {
             // 主菜单
-            Console.WriteLine("请输入序号并回车（默认为0）：");
-            Console.WriteLine("[0] - 用字典汉化游戏\n[1] - 提取文本到字典\n[2] - 补充新版本条目到字典（TODO）\n[3] - 从已汉化本体中提取字典");
-            string command = Console.ReadLine();
+            string menuString =
+@"请输入序号并回车（默认为0）：
+[0] - 用字典汉化游戏
+[1] - 提取文本到字典
+[2] - 补充新版本条目到字典
+[3] - 从已汉化本体中提取字典
+[4] - 设置
+[5] - 访问项目主页";
+            string command = Tools.ReadLine(menuString);
             switch (command)
             {
                 case "0":
@@ -37,9 +43,16 @@ public static class Start
                     ReadFile(appPath);
                     break;
                 case "2":
+                    versionUpdate(appPath);
                     break;
                 case "3":
                     ReadFile(appPath, true);
+                    break;
+                case "4":
+                    Settings();
+                    break;
+                case "5":
+                    Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 default:
                     Translator();
@@ -49,6 +62,14 @@ public static class Start
             Console.ReadKey();
             Console.Clear();
         }
+    }
+
+    static void Settings()
+    {
+        Process.Start(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"));
+        Console.WriteLine("请编辑打开的Config文件并保存，保存后才能生效。");
+        Console.ReadKey();
+        Configs.Init();
     }
 
     /// <summary>
@@ -69,7 +90,7 @@ public static class Start
         Parallel.ForEach(Directory.GetFiles(transFileDirectory, "*.json", SearchOption.AllDirectories), (jsonFile) =>
         {
             // 获取相对路径
-            var relativePath = jsonFile.Substring(transFileDirectory.Length + 1);
+            var relativePath = Tools.GetrelativePath(jsonFile, transFileDirectory);
             bool isCSV = relativePath.StartsWith("CSV");
             bool fileExist = false;
             // 得到输出路径
@@ -153,18 +174,12 @@ public static class Start
     static void ReadFile(string appPath, bool merge = false)
     {
         // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
-        if (Directory.Exists(Path.Combine(appPath, "CSV"))) Directory.Delete(Path.Combine(appPath, "CSV"), true);
-        if (Directory.Exists(Path.Combine(appPath, "ERB"))) Directory.Delete(Path.Combine(appPath, "ERB"), true);
+        Tools.CleanDirectory(Path.Combine(appPath, "CSV"));
+        Tools.CleanDirectory(Path.Combine(appPath, "ERB"));
 
-        string mergePath = "";
-        if (merge)
-        {
-            Console.WriteLine("请拖入已经汉化的游戏根目录（作为翻译参考）：");
-            mergePath = Console.ReadLine().Trim('"');
-        }
+        string mergePath = merge ? Tools.ReadLine("请拖入已经汉化的游戏根目录（作为翻译参考）：") : string.Empty;
 
-        Console.WriteLine("请拖入需要汉化的游戏根目录：");
-        string path = Console.ReadLine().Trim('"');
+        string path = Tools.ReadLine("请拖入需要汉化的游戏根目录：");
 
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
@@ -180,9 +195,10 @@ public static class Start
             Parallel.ForEach(csvNames, csvName =>
             {
                 // 获取相对路径
-                var relativePath = csvName.Substring(path.Length + 1);
+                var relativePath = Tools.GetrelativePath(csvName, path);
                 // 得到输出路径
                 var targetFile = Path.Combine(appPath, relativePath);
+                // 解析CSV
                 CSVParser parser = new CSVParser();
                 parser.ParseFile(csvName);
 
@@ -222,9 +238,10 @@ public static class Start
             Parallel.ForEach(erbNames, erbName =>
             {
                 // 获取相对路径
-                var relativePath = erbName.Substring(path.Length + 1);
+                var relativePath = Tools.GetrelativePath(erbName, path);
                 // 得到输出路径
                 var targetFile = Path.Combine(appPath, relativePath);
+                // 解析ERB
                 ERBParser parser = new ERBParser();
                 parser.ParseFile(erbName);
                 //parser.DebugPrint();
@@ -265,6 +282,241 @@ public static class Start
             ts.Milliseconds / 10);
         Console.WriteLine("耗时：" + elapsedTime);
         Console.WriteLine("已将生成的JSON放置在此程序目录下");
+        if (Configs.autoOpenFolder)
+        {
+            Process.Start(appPath);
+        }
+    }
+
+    /// <summary>
+    /// <b>更新版本</b>
+    /// <br>需求是：</br>
+    /// <br>1.旧的键值要维持不变（删除或隐藏旧条目不能改变其他条目键值）</br>
+    /// <br>2.新的键值不能重复（需要取旧版最大键值+1）</br>
+    /// <br>3.新的条目最好顺序不要在最后，而是在正确的上下文之间</br>
+    /// </summary>
+    static void versionUpdate(string appPath)
+    {
+        // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
+        Tools.CleanDirectory(Path.Combine(appPath, "CSV"));
+        Tools.CleanDirectory(Path.Combine(appPath, "ERB"));
+
+        string oldPath = Tools.ReadLine("请拖入放置CSV和ERB目录的译文目录：");
+        string[] oldFileArray = Directory.GetFiles(oldPath, "*.json", SearchOption.AllDirectories);
+        Dictionary<string, JArray> oldDict = new Dictionary<string, JArray>();
+        foreach (var oldFile in oldFileArray)
+        {
+            string oldTrans = File.ReadAllText(oldFile);
+            // pt的json都是[起头的
+            if (!oldTrans.StartsWith("["))
+            {
+                break;
+            }
+            JArray jsonArray = JArray.Parse(oldTrans);
+            // 以相对路径作为键值，先不考虑同目录下同名文件的情况，出事了再改
+            string relativePath = Tools.GetrelativePath(oldFile, oldPath);
+            oldDict.Add(relativePath, jsonArray);
+        }
+        string newPath = Tools.ReadLine($"已导入{oldDict.Count}个文件。\n请拖入新版本游戏目录：");
+        string csvDirectory = Path.Combine(newPath, "CSV");
+        string erbDirectory = Path.Combine(newPath, "ERB");
+
+        // 统计耗时
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        // 这段代码有空得封装一下，现在先跑起来
+        if (Directory.Exists(csvDirectory))
+        {
+            // 获取所有csv文件
+            var csvNames = Directory.GetFiles(csvDirectory, "*.csv", SearchOption.AllDirectories);
+            Parallel.ForEach(csvNames, csvName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(csvName, newPath);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析CSV
+                CSVParser parser = new CSVParser();
+                parser.ParseFile(csvName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                string fileKey = Path.ChangeExtension(relativePath, ".json");
+                // 如果译文字典里已经存在相应的文件，取作参考，否则正常输出
+                if (oldDict.ContainsKey(fileKey))
+                {
+                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
+
+                    int maxKey = int.MinValue;
+                    foreach (var jObject in referenceObjects)
+                    {
+                        string key = jObject["key"].ToString();
+                        // 获取键值最后的5位序号
+                        int num = int.Parse(Tools.lastNum.Match(key).Value);
+                        if (num > maxKey)
+                        {
+                            maxKey = num;
+                        }
+                    }
+                    // 得到起始序号
+                    int index = maxKey + 1;
+                    var csvList = parser.GetList().Distinct();
+                    List<JObject> PTJsonObjList = new List<JObject>();
+                    foreach (string text in csvList)
+                    {
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
+                        // 找到对应条目，就直接用参考覆盖
+                        if (targetObject != null)
+                        {
+                            PTJsonObjList.Add(targetObject);
+                        }
+                        // 否则，新建一个index序号的新条目
+                        else
+                        {
+                            PTJsonObjList.Add(new JObject
+                            {
+                                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
+                                ["original"] = text,
+                                ["translation"] = ""
+                            });
+                            // 仅在成功添加新条目时，才自增序号
+                            index++;
+                        }
+                    }
+
+                    if (PTJsonObjList.Count() > 0)
+                    {
+                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
+                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
+        }
+        else
+        {
+            throw new DirectoryNotFoundException($"找不到CSV目录: {csvDirectory}");
+        }
+        if (Directory.Exists(erbDirectory))
+        {
+            // 获取所有erb和erh文件
+            var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
+            .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
+
+            Parallel.ForEach(erbNames, erbName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(erbName, newPath);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析ERB
+                ERBParser parser = new ERBParser();
+                parser.ParseFile(erbName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                string fileKey = Path.ChangeExtension(relativePath, ".json");
+                if (oldDict.ContainsKey(fileKey))
+                {
+                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
+
+                    int maxKey = int.MinValue;
+                    foreach (var jObject in referenceObjects)
+                    {
+                        string key = jObject["key"].ToString();
+                        // 获取键值最后的5位序号
+                        int num = int.Parse(Tools.lastNum.Match(key).Value);
+                        if (num > maxKey)
+                        {
+                            maxKey = num;
+                        }
+                    }
+                    // 得到起始序号
+                    int index = maxKey + 1;
+                    // 合并变量名和长文本
+                    var tuple = parser.GetListTuple();
+                    List<string> varNameList = parser.VarNameListFilter(tuple.name);
+                    List<string> textList = parser.TextListFilter(tuple.text);
+
+                    List<JObject> PTJsonObjList = new List<JObject>();
+                    // 处理变量名
+                    foreach (string varName in varNameList)
+                    {
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == varName);
+                        // 找到对应条目，就直接用参考覆盖
+                        if (targetObject != null)
+                        {
+                            PTJsonObjList.Add(targetObject);
+                        }
+                        // 否则，新建一个index序号的新条目
+                        else
+                        {
+                            PTJsonObjList.Add(new JObject
+                            {
+                                ["key"] = new StringBuilder("变量")
+                                .Append(Path.ChangeExtension(relativePath, ""))
+                                .Append(index.ToString().PadLeft(5, '0'))
+                                .ToString(),
+                                ["original"] = varName,
+                                ["translation"] = ""
+                            });
+                            // 仅在成功添加新条目时，才自增序号
+                            index++;
+                        }
+                    }
+                    // 处理长文本
+                    foreach (string text in textList)
+                    {
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
+                        // 找到对应条目，就直接用参考覆盖
+                        if (targetObject != null)
+                        {
+                            PTJsonObjList.Add(targetObject);
+                        }
+                        // 否则，新建一个index序号的新条目
+                        else
+                        {
+                            PTJsonObjList.Add(new JObject
+                            {
+                                ["key"] = new StringBuilder("文本")
+                                .Append(Path.ChangeExtension(relativePath, ""))
+                                .Append(index.ToString().PadLeft(5, '0'))
+                                .ToString(),
+                                ["original"] = text,
+                                ["translation"] = ""
+                            });
+                            // 仅在成功添加新条目时，才自增序号
+                            index++;
+                        }
+                    }
+
+                    if (PTJsonObjList.Count() > 0)
+                    {
+                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
+                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
+        }
+        else
+        {
+            throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
+        }
+
+        // 格式化并输出耗时
+        stopwatch.Stop();
+        TimeSpan ts = stopwatch.Elapsed;
+        string elapsedTime = String.Format("{0:00}秒{1:00}",
+            ts.Seconds,
+            ts.Milliseconds / 10);
+        Console.WriteLine("耗时：" + elapsedTime);
+        Console.WriteLine("更新完毕！");
         if (Configs.autoOpenFolder)
         {
             Process.Start(appPath);

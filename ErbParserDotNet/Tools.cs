@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,6 +21,11 @@ public static class Tools
     /// 【更精细】匹配XX:YY:ZZ的系统变量
     /// </summary>
     public static Regex sysArrayFilter;
+
+    /// <summary>
+    /// 匹配末尾空格
+    /// </summary>
+    public static Regex lastNum;
 
     /// <summary>
     /// 全局变量，似乎暂时用不到
@@ -56,6 +62,8 @@ public static class Tools
         string kw_variable = $"(?:{kw_num}|{kw___var__}|{kw_var_int1}|{kw_var_int2}|{kw_var_string}|{kw_BASE}|{kw_CDFLAG}|{kw_GAMEBASE}|ASSI|ASSIPLAY|BOUGHT|CDOWN|CHARANUM|COUNT|CUP|DA|DAY|DB|DC|DD|DE|DITEMTYPE|DOWN|EJAC|EXPLV|GOTJUEL|ISASSI|ISTIMEOUT|ITEMPRICE|ITEMSALES|LASTLOAD_NO|LASTLOAD_VERSION|LINECOUNT|MONEY|NEXTCOM|NO|NOITEM|NOWEX|PBAND|PLAYER|PREVCOM|RAND|RANDDATA|PALAMLV|RELATION|SELECTCOM|TA|TARGET|TB|TIME|UP)";
 
         sysArrayFilter = new Regex($"^{kw_variable}(:{kw_variable}){{0,2}}$", RegexOptions.Compiled);
+
+        lastNum = new Regex(@"(\d+)(?=\D*$)", RegexOptions.Compiled);
     }
 
     /// <summary>
@@ -66,5 +74,38 @@ public static class Tools
     public static bool IsArray(string text)
     {
         return Configs.forceFilter ? engArrayFilter.IsMatch(text) : sysArrayFilter.IsMatch(text);
+    }
+
+    /// <summary>
+    /// 删除目录
+    /// </summary>
+    /// <param name="directoryPath"></param>
+    public static void CleanDirectory(string directoryPath)
+    {
+        if (Directory.Exists(directoryPath))
+        {
+            Directory.Delete(directoryPath, true);
+        }
+    }
+
+    /// <summary>
+    /// 获取用户输入
+    /// </summary>
+    /// <param name="prompt"></param>
+    /// <returns></returns>
+    public static string ReadLine(string prompt)
+    {
+        Console.WriteLine(prompt);
+        return Console.ReadLine().Trim('"');
+    }
+
+    /// <summary>
+    /// 获得文件相对于rootPath的路径
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    public static string GetrelativePath(string filePath, string rootPath)
+    {
+        return filePath.Substring(rootPath.Length + 1);
     }
 }

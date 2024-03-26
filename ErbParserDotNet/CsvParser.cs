@@ -44,8 +44,8 @@ public class CSVParser
         {
             return new JObject
             {
-                // 键值是相对路径(去除后缀)+四位数字ID
-                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(4, '0'),
+                // 键值是相对路径(去除后缀)+ 5位数字ID
+                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
                 ["original"] = item,
                 ["translation"] = ""
             };
@@ -76,8 +76,11 @@ public class CSVParser
                     {
                         PTJsonObjList.Add(new JObject
                         {
-                            // 键值是相对路径(去除后缀)+四位数字ID
-                            ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(4, '0'),
+                            // 键值是相对路径(去除后缀)+ 5位数字ID
+                            ["key"] = new StringBuilder("变量")
+                            .Append(Path.ChangeExtension(relativePath, ""))
+                            .Append(index.ToString().PadLeft(5, '0'))
+                            .ToString(),
                             ["original"] = originObjs[index],
                             ["translation"] = referenceObjs[index]
                         });
@@ -86,7 +89,10 @@ public class CSVParser
                     {
                         PTJsonObjList.Add(new JObject
                         {
-                            ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(4, '0'),
+                            ["key"] = new StringBuilder("变量")
+                            .Append(Path.ChangeExtension(relativePath, ""))
+                            .Append(index.ToString().PadLeft(5, '0'))
+                            .ToString(),
                             ["original"] = originObjs[index],
                             ["translation"] = ""
                         });
