@@ -9,7 +9,7 @@ using System.Collections.Generic;
 // 测试用例3：ARG:1 == -1 ? MASTER # ARG:1
 class ExpressionParser
 {
-    static readonly List<string> operators = new List<string> { "(", ")", "?", "#", ">", "<", "==", "!=", ">=", "<=", "!", "&&", "||", "&", "|", ",", ":", "+", "-", "*", "/", "TO" };
+    static readonly List<string> operators = new List<string> { "(", ")", "?", "#", ">", "<", "==", "!=", ">=", "<=", "!", "&&", "||", "&", "|", ",", ":", "+", "-", "*", "/", "%", "TO" };
     public static (List<string> vari, List<string> text) Slash(string expression)
     {
         List<string> variables = new List<string>();

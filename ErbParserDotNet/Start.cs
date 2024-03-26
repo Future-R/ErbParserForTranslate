@@ -69,7 +69,7 @@ public static class Start
 
     static void Debug()
     {
-        var (vari, text) = ExpressionParser.Slash("3 TO 10");
+        var (vari, text) = ExpressionParser.Slash("GETVAR(@\"%対面者%_戦闘破壊\") == 0");
         vari.ForEach(v => Console.WriteLine($"变量【{v}】"));
         text.ForEach(t => Console.WriteLine($"常量【{t}】"));
     }

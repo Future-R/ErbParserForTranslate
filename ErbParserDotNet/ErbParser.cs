@@ -166,11 +166,11 @@ public class ERBParser
             {
                 int spIndex = lineString.IndexOf(" ");
                 string rightValue = lineString.Substring(spIndex).Trim();
-                int cmIndex = lineString.IndexOf(",");
-                if (cmIndex != -1 && cmIndex + 1 < lineString.Length)
+                int cmIndex = rightValue.IndexOf(",");
+                if (cmIndex != -1 && cmIndex + 1 < rightValue.Length)
                 {
-                    string commaLeft = lineString.Substring(0, cmIndex).Trim();
-                    string commaRight = lineString.Substring(cmIndex + 1).Trim();
+                    string commaLeft = rightValue.Substring(0, cmIndex).Trim();
+                    string commaRight = rightValue.Substring(cmIndex + 1).Trim();
                     textList.Add(commaLeft);
                     // 参数2如果是纯数就不翻译了
                     if (!int.TryParse(commaRight, out _))
