@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -107,5 +108,52 @@ public static class Tools
     public static string GetrelativePath(string filePath, string rootPath)
     {
         return filePath.Substring(rootPath.Length + 1);
+    }
+
+
+    public static string LockReplace(string gameContent, JArray jsonArray)
+    {
+        // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
+        var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
+
+        // 已翻译过的字符会被标记锁定，不会再被二次翻译，避免短词典在长词典的译文上工作
+        List<int> lockIndices = new List<int>();
+
+        // 遍历字典，进行替换
+        foreach (var dictObj in dictObjs)
+        {
+            string key = dictObj["original"].ToString();
+            string value = dictObj["translation"].ToString();
+
+            int startIndex = 0;
+            // 记录原文在目标字符串中的位置
+            List<int> indices = new List<int>();
+
+            // 查找目标字符串中所有原文的位置
+            while ((startIndex = gameContent.IndexOf(key, startIndex)) != -1)
+            {
+                indices.Add(startIndex);
+                startIndex += key.Length; // 移动到下一个可能的匹配位置
+            }
+
+            // 如果已经替换过，则跳过
+            if (indices.Exists(index => index < gameContent.Length))
+            {
+                continue;
+            }
+
+            // 替换目标字符串中的所有匹配项，并更新indices列表
+            foreach (int index in indices)
+            {
+                gameContent = gameContent.Remove(index, key.Length).Insert(index, value);
+                // 更新indices列表中的所有索引，因为替换操作改变了后面的索引
+                for (int i = 0; i < indices.Count; i++)
+                {
+                    indices[i] += value.Length - key.Length;
+                }
+            }
+        }
+
+        return gameContent;
     }
 }

@@ -69,7 +69,7 @@ public static class Start
 
     static void Debug()
     {
-        var (vari, text) = ExpressionParser.Slash("!ENUMFILES(\"RESOURCES\", @\"{NO:ARG}*\", 1) && !ENUMFILES(\"RESOURCES\", @\"%NAME:ARG%*\", 1)");
+        var (vari, text) = ExpressionParser.Slash("MATCH(食材選択,GETNUM(ITEM, \"レタス\")) && MATCH(食材選択,GETNUM(ITEM, \"トマト\")) && MATCH(食材選択,GETNUM(ITEM, \"パン\"))");
         vari.ForEach(v => Console.WriteLine($"变量【{v}】"));
         text.ForEach(t => Console.WriteLine($"常量【{t}】"));
     }
@@ -144,20 +144,10 @@ public static class Start
                     JArray jsonArray = JArray.Parse(ptJsonContent);
                     // 读取游戏脚本
                     string scriptContent = File.ReadAllText(targetFile, Configs.fileEncoding);
-                    // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
-                    var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
-                    foreach (JObject dictObj in dictObjs)
-                    {
-                        string key = dictObj["original"].ToString();
-                        string value = dictObj["translation"].ToString();
-                        // stage：-1已隐藏; 0未翻译；1已翻译；2有疑问；3已检查; 5已审核；9已锁定
-                        if (dictObj["stage"].ToObject<int>() > 0)
-                        {
-                            scriptContent = scriptContent.Replace(key, value);
-                        }
-                    }
+                    // 保护型替换
+                    scriptContent = Tools.LockReplace(scriptContent, jsonArray);
                     // 覆盖写入
-                    File.WriteAllText(targetFile, scriptContent);
+                    File.WriteAllText(targetFile, scriptContent, Configs.fileEncoding);
                 }
             }
         });
