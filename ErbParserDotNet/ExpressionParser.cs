@@ -9,9 +9,11 @@ using System.Collections.Generic;
 // 测试用例3【三元】：ARG:1 == -1 ? MASTER # ARG:1
 // 测试用例4【赋值】：MAXBASE:キャラ_ID:体力 += (CFLAG:キャラ_ID:401 * 10)
 // 测试用例5【花括号】：!ENUMFILES("RESOURCES", @"{NO:ARG}*", 1) && !ENUMFILES("RESOURCES", @"%NAME:ARG%*", 1)
+// 测试用例6【汉字符号】：FLAG:自动补给：装甲材料 = ITEM_OWN:JGV(\"ITEMID_装甲材料\")
+
 class ExpressionParser
 {
-    static readonly List<string> operators = new List<string> { "(", ")", "?", "#", ">", "<", "==", "!=", ">=", "<=", "+=", "-=", "!", "&&", "||", "&", "|", ",", ":", "+", "-", "*", "/", "%", "{", "}", "TO" };
+    static readonly List<string> operators = new List<string> { "(", ")", "?", "#", ">", "<", "=", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "!", "&&", "||", "&", "|", ",", ":", "+", "-", "*", "/", "++", "--", "%", "{", "}", "TO" };
     public static (List<string> vari, List<string> text) Slash(string expression)
     {
         List<string> variables = new List<string>();
@@ -57,22 +59,12 @@ class ExpressionParser
 
             if (!inString)
             {
-                if (i < expression.Length - 1 &&
-                    ((temp == "=" && expression[i + 1] == '=')
-                    || (temp == "&" && expression[i + 1] == '&')
-                    || (temp == "|" && expression[i + 1] == '|')
-                    || (temp == ">" && expression[i + 1] == '=')
-                    || (temp == "<" && expression[i + 1] == '=')
-                    || (temp == "!" && expression[i + 1] == '=')
-                    || (temp == "+" && expression[i + 1] == '=')
-                    || (temp == "-" && expression[i + 1] == '=')
-                    || (temp == "T" && expression[i + 1] == 'O')))
-                {
-                    temp += expression[++i];
-                }
-
                 if (operators.Contains(temp))
                 {
+                    while (i <= expression.Length - 2 && operators.Contains(temp + expression[i + 1]))
+                    {
+                        temp += expression[++i];
+                    }
                     // 左边如果是英文，暴力判断为函数，把函数名从变量名列表中remove
                     if (temp == "(" && Char.IsLetter(lastChar) && variables.Count > 0)
                     {
@@ -82,7 +74,8 @@ class ExpressionParser
                     //Console.WriteLine($"符号：{temp}");
                     temp = "";
                 }
-                else if ((Char.IsLetterOrDigit(expression[i]) || expression[i] == '_') && (i == expression.Length - 1 || !Char.IsLetterOrDigit(expression[i + 1]) && expression[i + 1] != '_'))
+                // 为了方便，暂时不支持在变量名中使用数字了
+                else if (IsAllowChar(expression[i]) && (i == expression.Length - 1 || !IsAllowChar(expression[i + 1])))
                 {
                     // 捕获变量名
                     variables.Add(temp);
@@ -101,4 +94,28 @@ class ExpressionParser
         }
         return (vari: variables, text: constants);
     }
+
+    public static bool IsAllowChar(char c)
+    {
+        // 下划线
+        if (c == '_')
+        {
+            return true;
+        }
+
+        // 字母和汉字
+        if (char.IsLetter(c))
+        {
+            return true;
+        }
+
+        // 全角符号
+        if (c >= 0xFF00 && c <= 0xFFEF)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
 }

@@ -205,7 +205,7 @@ public class ERBParser
                 continue;
             }
             // 其它PRINT系，右值丢给译者
-            else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATAFORM"))
+            else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATAFORM") || lineString.StartsWith("REUSELASTLINE"))
             {
                 int spIndex = lineString.IndexOf(" ");
                 if (spIndex == -1)
@@ -215,7 +215,32 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 textList.Add(rightValue);
             }
-            // 包含匹配
+            // 改变颜色，右值一般是变量或者R,G,B，直接扔去做表达式解析
+            else if (lineString.StartsWith("SETCOLOR "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
+            }
+            // 乘算 TIMES int, float，直接把右值拿去解析吧，也别管参数类型了，麻烦
+            else if (lineString.StartsWith("TIMES "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
+            }
+            // 末尾匹配
+            // 变量自增自减少
+            else if (lineString.EndsWith("++") || lineString.EndsWith("--"))
+            {
+                string varName = lineString.Substring(0, lineString.Length - 2).Trim();
+                varNameList.Add(varName);
+            }
+            // 包含型匹配
             else
             {
                 // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
