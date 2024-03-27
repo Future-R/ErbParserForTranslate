@@ -128,13 +128,15 @@ public class ERBParser
                         .Select(arg => arg.Trim());
                 varNameList.Add(rightEnumer.FirstOrDefault());
             }
-            // Switch-Case的Switch
+            // Switch-Case的Switch，右值拿去判别式解析
             else if (lineString.StartsWith("SELECTCASE "))
             {
                 var rightValue = lineString.Substring(10).Trim();
-                varNameList.Add(rightValue);
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
             }
-            // 匹配判别式……CASE TO暂时没想好在哪个环节筛掉比较合适，先放着
+            // 匹配判别式……解析右值
             else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF ") || lineString.StartsWith("CASE "))
             {
                 int spIndex = lineString.IndexOf(" ");
@@ -143,21 +145,16 @@ public class ERBParser
                 varNameList.AddRange(vari);
                 textList.AddRange(text);
             }
-            // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值
+            // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值，不管了，统统扔去解析
             else if (lineString.StartsWith("RETURN"))
             {
                 int spIndex = lineString.IndexOf(" ");
                 if (spIndex != -1)
                 {
                     string rightValue = lineString.Substring(spIndex).Trim();
-                    if (lineString.StartsWith("RETURNF"))
-                    {
-                        textList.Add(rightValue);
-                    }
-                    else if (rightValue.Length > 0)
-                    {
-                        varNameList.Add(rightValue);
-                    }
+                    var (vari, text) = ExpressionParser.Slash(rightValue);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
                 }
             }
             // 匹配打印按钮，可能是PRINTBUTTON、PRINTBUTTONC、PRINTBUTTONLC
@@ -179,12 +176,14 @@ public class ERBParser
                     }
                 }
             }
-            // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢
+            // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢，不管了，拿去表达式解析
             else if (lineString.StartsWith("PRINTV") || lineString.StartsWith("PRINTS"))
             {
                 int spIndex = lineString.IndexOf(" ");
                 string rightValue = lineString.Substring(spIndex).TrimStart();
-                varNameList.Add(rightValue);
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
             }
             // HTML_PRINT，右值是FORN表达式，如果有英文引号，判断为文本，否则就是变量
             else if (lineString.StartsWith("HTML_PRINT "))
@@ -219,38 +218,36 @@ public class ERBParser
             // 包含匹配
             else
             {
-                // 匹配赋值，左值一定是变量，右值直接扔给译者算了
+                // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
                 if (lineString.Contains(" = "))
                 {
-                    int eqIndex = lineString.IndexOf("=");
-                    string leftValue = lineString.Substring(0, eqIndex).Trim();
-                    string rightValue = lineString.Substring(eqIndex + 1).Trim();
-                    varNameList.Add(leftValue);
-                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                    var (vari, text) = ExpressionParser.Slash(lineString);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
                 }
-                // 匹配字符串'=赋值，左值一定是字符串变量，右值一定是字符串
+                // 匹配字符串'=赋值，左值一定是字符串变量，右值一定是字符串。左值拿去判别式解析试试
                 if (lineString.Contains(" '= "))
                 {
                     int eqIndex = lineString.IndexOf("=");
                     string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
-                    varNameList.Add(leftValue);
+                    var (vari, text) = ExpressionParser.Slash(leftValue);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
                 }
-                // 匹配+=和-=赋值，左值一定是变量，右值直接扔给译者算了
-                if (lineString.Contains("+="))
+                // 匹配+=和-=赋值，整行拿去做判别式解析试试
+                if (lineString.Contains("+=") || lineString.Contains("-="))
                 {
-                    int eqIndex = lineString.IndexOf("=");
-                    string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
-                    string rightValue = lineString.Substring(eqIndex + 1).Trim();
-                    varNameList.Add(leftValue);
-                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                    var (vari, text) = ExpressionParser.Slash(lineString);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
                 }
             }
         }
     }
 
-    // 合并重复成员，过滤系统变量和纯数字
+    // 合并重复成员，过滤变量和纯数字
     // 括号的特殊处理：没想好怎么处理，先按有括号就不拆的做法
     public List<string> VarNameListFilter(List<string> originalList)
     {
@@ -258,7 +255,7 @@ public class ERBParser
             .Where(token => !Tools.IsArray(token) && !IsNaturalNumber(token))
             .ToList();
     }
-    // 剔除系统内置变量名
+    // 合并重复成员，过滤变量和纯数字
     // 是否需要剔除当前文件的变量名，待观察
     public List<string> TextListFilter(List<string> originalList)
     {

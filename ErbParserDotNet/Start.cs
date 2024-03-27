@@ -69,7 +69,7 @@ public static class Start
 
     static void Debug()
     {
-        var (vari, text) = ExpressionParser.Slash("GETVAR(@\"%対面者%_戦闘破壊\") == 0");
+        var (vari, text) = ExpressionParser.Slash("!ENUMFILES(\"RESOURCES\", @\"{NO:ARG}*\", 1) && !ENUMFILES(\"RESOURCES\", @\"%NAME:ARG%*\", 1)");
         vari.ForEach(v => Console.WriteLine($"变量【{v}】"));
         text.ForEach(t => Console.WriteLine($"常量【{t}】"));
     }
