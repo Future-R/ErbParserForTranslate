@@ -69,9 +69,14 @@ public static class Start
 
     static void Debug()
     {
-        var (vari, text) = ExpressionParser.Slash("MATCH(食材選択,GETNUM(ITEM, \"レタス\")) && MATCH(食材選択,GETNUM(ITEM, \"トマト\")) && MATCH(食材選択,GETNUM(ITEM, \"パン\"))");
-        vari.ForEach(v => Console.WriteLine($"变量【{v}】"));
-        text.ForEach(t => Console.WriteLine($"常量【{t}】"));
+        AhoCorasick ahoCorasick = new AhoCorasick();
+        ahoCorasick.AddPattern("自動補給：装甲材", "自动补给：装甲材料");
+        ahoCorasick.AddPattern("装甲材", "星星");
+        ahoCorasick.AddPattern("和", "&");
+        ahoCorasick.Build();
+        var test = "测试自動補給：装甲材和装甲材还有装甲材和自動補給：装甲材呢";
+        test = ahoCorasick.Process(test);
+        Console.WriteLine(test);
     }
 
     static void Settings()
@@ -144,8 +149,8 @@ public static class Start
                     JArray jsonArray = JArray.Parse(ptJsonContent);
                     // 读取游戏脚本
                     string scriptContent = File.ReadAllText(targetFile, Configs.fileEncoding);
-                    // 保护型替换
-                    scriptContent = Tools.LockReplace(scriptContent, jsonArray);
+                    // 使用字典替换原文
+                    scriptContent = Tools.ACReplace(scriptContent, jsonArray);
                     // 覆盖写入
                     File.WriteAllText(targetFile, scriptContent, Configs.fileEncoding);
                 }

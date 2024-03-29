@@ -13,7 +13,6 @@ using System.Collections.Generic;
 
 class ExpressionParser
 {
-    static readonly List<string> operators = new List<string> { "(", ")", "?", "#", ">", "<", "=", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "!", "&&", "||", "&", "|", ",", ":", "+", "-", "*", "/", "++", "--", "%", "{", "}", "TO" };
     public static (List<string> vari, List<string> text) Slash(string expression)
     {
         List<string> variables = new List<string>();
@@ -59,9 +58,9 @@ class ExpressionParser
 
             if (!inString)
             {
-                if (operators.Contains(temp))
+                if (Configs.operators.Contains(temp))
                 {
-                    while (i <= expression.Length - 2 && operators.Contains(temp + expression[i + 1]))
+                    while (i <= expression.Length - 2 && Configs.operators.Contains(temp + expression[i + 1]))
                     {
                         temp += expression[++i];
                     }
@@ -81,7 +80,7 @@ class ExpressionParser
                     variables.Add(temp);
                     temp = "";
                 }
-                else if (Char.IsDigit(expression[i]) && !operators.Contains(temp) && (i == expression.Length - 1 || !Char.IsDigit(expression[i + 1])))
+                else if (Char.IsDigit(expression[i]) && !Configs.operators.Contains(temp) && (i == expression.Length - 1 || !Char.IsDigit(expression[i + 1])))
                 {
                     // 捕获数字或字符串
                     constants.Add(temp);

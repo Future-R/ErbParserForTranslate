@@ -280,7 +280,7 @@ public class ERBParser
             .Where(token => !Tools.IsArray(token) && !IsNaturalNumber(token))
             .ToList();
     }
-    // 合并重复成员，过滤变量和纯数字
+    // 合并重复成员，过滤纯英文和纯数字
     // 是否需要剔除当前文件的变量名，待观察
     public List<string> TextListFilter(List<string> originalList)
     {

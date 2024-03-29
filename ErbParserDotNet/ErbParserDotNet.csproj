@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AhoCorasick.cs" />
     <Compile Include="CsvParser.cs" />
     <Compile Include="Configs.cs" />
     <Compile Include="ErbParser.cs" />

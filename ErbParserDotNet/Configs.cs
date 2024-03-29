@@ -13,6 +13,9 @@ public static class Configs
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
+
+    // 解析表达式需要的符号集合
+    public static List<string> operators { get; private set; }
     // 强力过滤变量名
     public static bool forceFilter = true;
     // 执行完毕后自动打开文件夹
@@ -32,6 +35,8 @@ public static class Configs
             // Encoding.GetEncoding无法获取带BOM的UTF-8，这里做特殊处理
             string encoding = configs["读取文件使用的编码"].ToString();
             fileEncoding = encoding.Contains("BOM") ? new UTF8Encoding(true) : Encoding.GetEncoding(encoding);
+
+            operators = configs["需要处理的操作符"].ToObject<List<string>>();
 
             forceFilter = (bool)configs["强力过滤变量名"].ToObject(typeof(bool));
             autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));

@@ -111,6 +111,16 @@ public static class Tools
     }
 
 
+    /// <summary>
+    /// 以非常谨慎的方式进行替换，效率比较低，但是很安全
+    /// <br>单个文件中，已经被翻译过的部分会被标记，不再进行二次翻译</br>
+    /// <br>虽然性能不是主要问题，不过之后应该会提供另一种效率更高的实现</br>
+    /// <br>操作字符串还是太慢了，直接剔除被包含的JArray成员应该会快得多</br>
+    /// </summary>
+    /// <param name="gameContent"></param>
+    /// <param name="jsonArray"></param>
+    /// <returns></returns>
+    [Obsolete("这个方法已经被弃用，因为它的效率很低。请改用ACReplace代替。")]
     public static string LockReplace(string gameContent, JArray jsonArray)
     {
         // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
@@ -122,6 +132,10 @@ public static class Tools
         // 遍历字典，进行替换
         foreach (var dictObj in dictObjs)
         {
+            if ((int)dictObj["stage"].ToObject(typeof(int)) < 1)
+            {
+                continue;
+            }
             string key = dictObj["original"].ToString();
             string value = dictObj["translation"].ToString();
 
@@ -155,5 +169,30 @@ public static class Tools
         }
 
         return gameContent;
+    }
+    /// <summary>
+    /// 使用字典树来一次遍历原文并替换
+    /// </summary>
+    /// <param name="gameContent"></param>
+    /// <param name="jsonArray"></param>
+    /// <returns></returns>
+    public static string ACReplace(string gameContent, JArray jsonArray)
+    {
+        // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
+        var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
+        AhoCorasick ahoCorasick = new AhoCorasick();
+        foreach (var dictObj in dictObjs)
+        {
+            // stage大于0才会被翻译，-1是已隐藏，0是未翻译
+            if ((int)dictObj["stage"].ToObject(typeof(int)) > 0)
+            {
+                string key = dictObj["original"].ToString();
+                string value = dictObj["translation"].ToString();
+                
+                ahoCorasick.AddPattern(key, value);
+            }
+        }
+        ahoCorasick.Build();
+        return ahoCorasick.Process(gameContent);
     }
 }
