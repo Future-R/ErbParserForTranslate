@@ -45,7 +45,7 @@ public static class Tools
     /// </summary>
     public static void Init()
     {
-        string kw_eng = @"[_a-zA-Z0-9]\w*";
+        string kw_eng = @"[_a-zA-Z0-9]*";
         engArrayFilter = new Regex($@"^{kw_eng}(:{kw_eng}){{0,2}}$", RegexOptions.Compiled);
 
         string kw___var__ = "(?:__(?:FILE|FUNCTION|INT_MAX|INT_MIN|LINE)__)";
@@ -124,7 +124,9 @@ public static class Tools
     public static string LockReplace(string gameContent, JArray jsonArray)
     {
         // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
-        var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
+        var dictObjs = jsonArray.ToObject<List<JObject>>()
+            .Where(obj => (int)obj["stage"].ToObject(typeof(int)) > 0)
+            .OrderByDescending(obj => obj["original"].ToString().Length);
 
         // 已翻译过的字符会被标记锁定，不会再被二次翻译，避免短词典在长词典的译文上工作
         List<int> lockIndices = new List<int>();
@@ -132,10 +134,6 @@ public static class Tools
         // 遍历字典，进行替换
         foreach (var dictObj in dictObjs)
         {
-            if ((int)dictObj["stage"].ToObject(typeof(int)) < 1)
-            {
-                continue;
-            }
             string key = dictObj["original"].ToString();
             string value = dictObj["translation"].ToString();
 
@@ -151,7 +149,7 @@ public static class Tools
             }
 
             // 如果已经替换过，则跳过
-            if (indices.Exists(index => index < gameContent.Length))
+            if (lockIndices.Exists(index => index < gameContent.Length))
             {
                 continue;
             }
@@ -179,18 +177,16 @@ public static class Tools
     public static string ACReplace(string gameContent, JArray jsonArray)
     {
         // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
-        var dictObjs = jsonArray.ToObject<List<JObject>>().OrderByDescending(obj => obj["original"].ToString().Length);
+        var dictObjs = jsonArray.ToObject<List<JObject>>()
+            .Where(obj => (int)obj["stage"].ToObject(typeof(int)) > 0)
+            .OrderByDescending(obj => obj["original"].ToString().Length);
         AhoCorasick ahoCorasick = new AhoCorasick();
         foreach (var dictObj in dictObjs)
         {
-            // stage大于0才会被翻译，-1是已隐藏，0是未翻译
-            if ((int)dictObj["stage"].ToObject(typeof(int)) > 0)
-            {
-                string key = dictObj["original"].ToString();
-                string value = dictObj["translation"].ToString();
-                
-                ahoCorasick.AddPattern(key, value);
-            }
+            string key = dictObj["original"].ToString();
+            string value = dictObj["translation"].ToString();
+
+            ahoCorasick.AddPattern(key, value);
         }
         ahoCorasick.Build();
         return ahoCorasick.Process(gameContent);

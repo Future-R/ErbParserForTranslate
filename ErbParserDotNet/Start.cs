@@ -31,8 +31,10 @@ public static class Start
 [1] - 提取文本到字典
 [2] - 补充新版本条目到字典
 [3] - 从已汉化本体中提取字典
-[4] - 设置
-[5] - 访问项目主页";
+[4] - 检查字典变量名（制作中）
+[5] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
+[6] - 设置
+[7] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -49,9 +51,15 @@ public static class Start
                     ReadFile(appPath, true);
                     break;
                 case "4":
-                    Settings();
+                    CheckVariable();
                     break;
                 case "5":
+                    暴力修正();
+                    break;
+                case "6":
+                    Settings();
+                    break;
+                case "7":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -69,14 +77,31 @@ public static class Start
 
     static void Debug()
     {
-        AhoCorasick ahoCorasick = new AhoCorasick();
-        ahoCorasick.AddPattern("自動補給：装甲材", "自动补给：装甲材料");
-        ahoCorasick.AddPattern("装甲材", "星星");
-        ahoCorasick.AddPattern("和", "&");
-        ahoCorasick.Build();
-        var test = "测试自動補給：装甲材和装甲材还有装甲材和自動補給：装甲材呢";
-        test = ahoCorasick.Process(test);
-        Console.WriteLine(test);
+        var test = Tools.ReadLine("请输入：");
+        string kw_eng = @"[_a-zA-Z0-9]*";
+        Regex engArrayFilter = new Regex($@"^{kw_eng}$");
+        var isArray = engArrayFilter.IsMatch(test);
+        var isNum = int.TryParse(test, out int n) && n >= 0;
+        Console.WriteLine($"isArray:{isArray};isNum:{isNum}");
+
+        //var test = ExpressionParser.Slash(Tools.ReadLine("请输入："));
+        //foreach (var item in test.vari)
+        //{
+        //    Console.WriteLine($"【变量】{item}");
+        //}
+        //foreach (var item in test.text)
+        //{
+        //    Console.WriteLine($"【文本】{item}");
+        //}
+
+        //AhoCorasick ahoCorasick = new AhoCorasick();
+        //ahoCorasick.AddPattern("ABDCEFG", "abcd");
+        //ahoCorasick.AddPattern("ABC", "defg");
+        //ahoCorasick.AddPattern("EF", "ef");
+        //ahoCorasick.Build();
+        //var test = "23,ABCDEFGHIJKABC";
+        //test = ahoCorasick.Process(test);
+        //Console.WriteLine(test);
     }
 
     static void Settings()
@@ -88,18 +113,54 @@ public static class Start
     }
 
     /// <summary>
+    /// 虽然说要检查变量名，但具体要怎么给用户交互呢？
+    /// 不断弹出选项让用户输入序号还是？
+    /// 百分号和花括号要检查吗？
+    /// </summary>
+    static void CheckVariable()
+    {
+
+    }
+
+    static void 暴力修正()
+    {
+        // 获取指定目录下的所有文件
+        Console.WriteLine("请拖入res目录：");
+        string[] files = Directory.GetFiles(Console.ReadLine(), "*.*", SearchOption.AllDirectories);
+
+        // 筛选出指定类型的文件
+        List<string> 文件名List = new List<string>();
+        foreach (string file in files)
+        {
+            if (file.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
+                file.EndsWith(".erh", StringComparison.OrdinalIgnoreCase))
+            {
+                文件名List.Add(file);
+            }
+        }
+        string pt输入 = File.ReadAllText(Tools.ReadLine("请拖入暴力修正字典："));
+        List<JObject> 修正字典 = JArray.Parse(pt输入).ToObject<List<JObject>>();
+
+        Timer.Start();
+        foreach (var 文件名 in 文件名List)
+        {
+            string 待处理文本 = File.ReadAllText(文件名);
+            待处理文本 = Tools.ACReplace(待处理文本, JArray.Parse(pt输入));
+            File.WriteAllText(文件名, 待处理文本);
+        }
+        Console.WriteLine("替换完毕！");
+        Timer.Stop();
+    }
+
+    /// <summary>
     /// 用字典汉化游戏
     /// </summary>
     static void Translator()
     {
-        Console.WriteLine("请拖入需要汉化的游戏根目录（请做好备份）：");
-        string gameDirectory = Console.ReadLine().Trim('"');
-        Console.WriteLine("请拖入放置CSV和ERB目录的译文目录：");
-        string transFileDirectory = Console.ReadLine().Trim('"');
+        string gameDirectory = Tools.ReadLine("请拖入需要汉化的游戏根目录（请做好备份）：");
+        string transFileDirectory = Tools.ReadLine("请拖入放置CSV和ERB目录的译文目录：");
 
-        // 统计耗时
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
+        Timer.Start();
 
         // 遍历所有译文JSON
         Parallel.ForEach(Directory.GetFiles(transFileDirectory, "*.json", SearchOption.AllDirectories), (jsonFile) =>
@@ -157,13 +218,8 @@ public static class Start
             }
         });
 
-        // 格式化并输出耗时
-        stopwatch.Stop();
-        TimeSpan ts = stopwatch.Elapsed;
-        string elapsedTime = String.Format("{0:00}秒{1:00}",
-            ts.Seconds,
-            ts.Milliseconds / 10);
-        Console.WriteLine("耗时：" + elapsedTime);
+        Timer.Stop();
+        
         Console.WriteLine("翻译已完成！");
         if (Configs.autoOpenFolder)
         {
@@ -189,9 +245,7 @@ public static class Start
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
 
-        // 统计耗时
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
+        Timer.Start();
 
         if (Directory.Exists(csvDirectory))
         {
@@ -279,13 +333,7 @@ public static class Start
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
 
-        // 格式化并输出耗时
-        stopwatch.Stop();
-        TimeSpan ts = stopwatch.Elapsed;
-        string elapsedTime = String.Format("{0:00}秒{1:00}",
-            ts.Seconds,
-            ts.Milliseconds / 10);
-        Console.WriteLine("耗时：" + elapsedTime);
+        Timer.Stop();
         Console.WriteLine("已将生成的JSON放置在此程序目录下");
         if (Configs.autoOpenFolder)
         {
@@ -326,9 +374,7 @@ public static class Start
         string csvDirectory = Path.Combine(newPath, "CSV");
         string erbDirectory = Path.Combine(newPath, "ERB");
 
-        // 统计耗时
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
+        Timer.Start();
 
         // 这段代码有空得封装一下，现在先跑起来
         if (Directory.Exists(csvDirectory))
@@ -514,14 +560,7 @@ public static class Start
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
 
-        // 格式化并输出耗时
-        stopwatch.Stop();
-        TimeSpan ts = stopwatch.Elapsed;
-        string elapsedTime = String.Format("{0:00}秒{1:00}",
-            ts.Seconds,
-            ts.Milliseconds / 10);
-        Console.WriteLine("耗时：" + elapsedTime);
-        Console.WriteLine("更新完毕！");
+        Timer.Stop();
         if (Configs.autoOpenFolder)
         {
             Process.Start(appPath);

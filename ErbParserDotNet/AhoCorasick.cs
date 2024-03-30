@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 /// <summary>
@@ -67,6 +68,7 @@ public class AhoCorasick
         while (i < text.Length)
         {
             char c = text[i];
+            Node success;
             // 如果当前节点没有对应的子节点，通过失败指针继续匹配
             while (node != _root && !node.Children.ContainsKey(c))
             {
@@ -74,14 +76,27 @@ public class AhoCorasick
             }
             // 如果当前节点有子节点c，则移动到该子节点
             node = node.Children.ContainsKey(c) ? node.Children[c] : _root;
-            // 如果当前节点有翻译，则执行替换操作
+
+            // 这里不应该立即进替换，否则只会最短匹配。但我现在脑子不清醒，想不清楚要具体怎么做，先放着了。
+            // 大致思路是如果匹配成功，用一个tempNode来记录最长匹配，然后再继续搜索子节点有没有i+1，直到当前节点没有对应的子节点，或者i走完了，把tempNode扔给replacements
+            // 因为是向下匹配，所以只要匹配成功就一定会更长，失败也只要回退一步
+
             if (node.Translation != null)
             {
+                do
+                {
+                    success = node;
+                    i++;
+                    if (i >= text.Length - 1) break;
+                    c = text[i];
+                    node = node.Children.ContainsKey(c) ? node.Children[c] : _root;
+                } while (node != _root && i < text.Length);
+
                 // 计算替换的起始位置和长度
-                int start = i - node.OriginalLength + 1;
-                replacements.Add((start, node.OriginalLength, node.Translation));
+                int start = i - success.OriginalLength;
+                replacements.Add((start, success.OriginalLength, success.Translation));
                 // 跳过将被替换的部分，并重置当前节点为根节点
-                i = start + node.OriginalLength;
+                i = start + success.OriginalLength;
                 node = _root;
             }
             else
