@@ -35,8 +35,8 @@ public class ERBParser
             // 后续一切处理都是以注释已被筛掉为前提
             if (lineString.StartsWith(";")) continue;
             // 匹配函数
-            // 之前只匹配了@，现在补充CALL和TRYCALL
-            else if (lineString.StartsWith("@") || lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL"))
+            // 只匹配了声明用的@
+            else if (lineString.StartsWith("@"))
             {
                 int start = lineString.IndexOf("(");
                 int end = start != -1 ? lineString.IndexOf(")", start) : -1;
@@ -76,6 +76,15 @@ public class ERBParser
                         }
                     }
                 }
+            }
+            // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
+            else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL"))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).Trim();
+                var (vari, text) = ExpressionParser.Slash(rightValue);
+                varNameList.AddRange(vari);
+                textList.AddRange(text);
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
             else if (lineString.StartsWith("#DIM"))

@@ -77,22 +77,38 @@ public static class Start
 
     static void Debug()
     {
-        var test = Tools.ReadLine("请输入：");
-        string kw_eng = @"[_a-zA-Z0-9]*";
-        Regex engArrayFilter = new Regex($@"^{kw_eng}$");
-        var isArray = engArrayFilter.IsMatch(test);
-        var isNum = int.TryParse(test, out int n) && n >= 0;
-        Console.WriteLine($"isArray:{isArray};isNum:{isNum}");
+        //var test = Tools.ReadLine("请输入：");
+        //if (test.StartsWith("@") || test.StartsWith("CALL") || test.StartsWith("TRYCALL"))
+        //{
+        //    int spIndex = test.IndexOf(" ");
+        //    string rightValue = test.Substring(spIndex).Trim();
+        //    var (vari, text) = ExpressionParser.Slash(rightValue);
+        //    foreach (var item in vari)
+        //    {
+        //        Console.WriteLine($"【变量】{item}");
+        //    }
+        //    foreach (var item in text)
+        //    {
+        //        Console.WriteLine($"【文本】{item}");
+        //    }
+        //}
 
-        //var test = ExpressionParser.Slash(Tools.ReadLine("请输入："));
-        //foreach (var item in test.vari)
-        //{
-        //    Console.WriteLine($"【变量】{item}");
-        //}
-        //foreach (var item in test.text)
-        //{
-        //    Console.WriteLine($"【文本】{item}");
-        //}
+        //var test = Tools.ReadLine("请输入：");
+        //string kw_eng = @"[_a-zA-Z0-9]*";
+        //Regex engArrayFilter = new Regex($@"^{kw_eng}$");
+        //var isArray = engArrayFilter.IsMatch(test);
+        //var isNum = int.TryParse(test, out int n) && n >= 0;
+        //Console.WriteLine($"isArray:{isArray};isNum:{isNum}");
+
+        var test = ExpressionParser.Slash(Tools.ReadLine("请输入："));
+        foreach (var item in test.vari)
+        {
+            Console.WriteLine($"【变量】{item}");
+        }
+        foreach (var item in test.text)
+        {
+            Console.WriteLine($"【文本】{item}");
+        }
 
         //AhoCorasick ahoCorasick = new AhoCorasick();
         //ahoCorasick.AddPattern("ABDCEFG", "abcd");
