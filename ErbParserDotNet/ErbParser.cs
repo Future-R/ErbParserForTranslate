@@ -19,7 +19,14 @@ public class ERBParser
         try
         {
             string content = File.ReadAllText(filePath, Configs.fileEncoding);
+            // 一个暴力处理，如果同目录有ERH，则拼接到ERB前面
+            if (File.Exists(Path.ChangeExtension(filePath, "ERH")))
+            {
+                content = File.ReadAllText(Path.ChangeExtension(filePath, "ERH"), Configs.fileEncoding) + "\n" + content;
+            }
             lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", " ").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
+            // 处理花括号合并多行代码
+            lineList = mergeLines(lineList);
         }
         catch (Exception ex)
         {
@@ -451,6 +458,50 @@ public class ERBParser
         {
             Console.WriteLine(item);
         }
+    }
+
+    /// <summary>
+    /// 合并花括号括起的行
+    /// </summary>
+    /// <returns></returns>
+    List<string> mergeLines(List<string> inputList)
+    {
+        // 用于存储处理后的结果
+        List<string> resultList = new List<string>();
+        // 用于标记是否遇到开始大括号
+        bool insideBraces = false;
+        // 用于存储大括号内的字符串
+        StringBuilder bracedContent = new StringBuilder();
+
+        foreach (var item in inputList)
+        {
+            if (item == "{")
+            {
+                // 遇到开始大括号，标记为在大括号内
+                insideBraces = true;
+                // 清空之前的大括号内容
+                bracedContent.Clear();
+            }
+            else if (item == "}")
+            {
+                // 遇到结束大括号，标记为不在大括号内
+                insideBraces = false;
+                // 将大括号内的内容添加到结果列表
+                resultList.Add(bracedContent.ToString());
+            }
+            else if (insideBraces)
+            {
+                // 如果在大括号内，将当前项添加到大括号内容
+                bracedContent.AppendLine(item);
+            }
+            else
+            {
+                // 如果不在大括号内，直接添加到结果列表
+                resultList.Add(item);
+            }
+        }
+
+        return resultList;
     }
 
 }

@@ -141,7 +141,7 @@ public static class Start
     static void 暴力修正()
     {
         // 获取指定目录下的所有文件
-        Console.WriteLine("请拖入res目录：");
+        Console.WriteLine("请拖入游戏根目录：（做好备份）");
         string[] files = Directory.GetFiles(Console.ReadLine(), "*.*", SearchOption.AllDirectories);
 
         // 筛选出指定类型的文件
@@ -154,14 +154,21 @@ public static class Start
                 文件名List.Add(file);
             }
         }
-        string pt输入 = File.ReadAllText(Tools.ReadLine("请拖入暴力修正字典："));
-        List<JObject> 修正字典 = JArray.Parse(pt输入).ToObject<List<JObject>>();
+        string[] pt文件名组 = Directory.GetFiles(Tools.ReadLine("请拖入暴力修正字典目录（会合并多个字典）："), "*json", SearchOption.AllDirectories);
 
         Timer.Start();
+
+        StringBuilder pt输入 = new StringBuilder();
+        foreach (var item in pt文件名组)
+        {
+            // AppendLine自带换行符
+            pt输入.AppendLine(File.ReadAllText(item));
+        }
+        JArray 修正字典 = JArray.Parse(pt输入.ToString());
         foreach (var 文件名 in 文件名List)
         {
             string 待处理文本 = File.ReadAllText(文件名);
-            待处理文本 = Tools.ACReplace(待处理文本, JArray.Parse(pt输入));
+            待处理文本 = Tools.ACReplace(待处理文本, 修正字典);
             File.WriteAllText(文件名, 待处理文本);
         }
         Console.WriteLine("替换完毕！");
@@ -307,8 +314,17 @@ public static class Start
         if (Directory.Exists(erbDirectory))
         {
             // 获取所有erb和erh文件
+            // 这里用一个扭曲的方法来处理ERB和ERH同名的情况，主要是为了维护正在翻译中的项目的键值
+            // 也就是同名时，把ERH从列表中删掉，然后在具体ErbParser的时候，尝试寻找同目录的ERH文件，如果有，把ERH拼接在ERB前面
             var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
-            .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
+            .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)))
+
+            // 首先，创建一个包含所有文件名（不包含扩展名）和其对应的完整文件路径的字典
+            .GroupBy(file => Path.GetFileNameWithoutExtension(file), file => file)
+            // 对于每个分组，选择扩展名为.erb的文件，如果有的话
+            .Select(group => group.FirstOrDefault(file => file.EndsWith(".ERB") || file.EndsWith(".erb")))
+            // 过滤掉为null的项，即那些只包含.erh文件的组
+            .Where(file => file != null);
 
             Parallel.ForEach(erbNames, erbName =>
             {
