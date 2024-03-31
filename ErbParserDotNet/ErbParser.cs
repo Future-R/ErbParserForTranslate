@@ -51,6 +51,10 @@ public class ERBParser
                 // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
                 if (start != -1 && start < end)
                 {
+                    // 匹配函数名，只要@不紧接着左括号就没问题，真紧接了也是源代码有问题
+                    string funcName = lineString.Substring(1, start - 1);
+                    varNameList.Add(funcName);
+
                     string args = lineString.Substring(start + 1, end - start - 1);
                     var tokens = args.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
@@ -97,19 +101,44 @@ public class ERBParser
             else if (lineString.StartsWith("#DIM"))
             {
                 int eqIndex = lineString.IndexOf("=");
-                // 无等号的话，只声明不赋值。以空格分隔，最后一个元素是变量名。
+                // 无等号的话，只声明不赋值。以空格分隔取到右值
+                // 右值开头可能有SAVEDATA、DYNAMIC、CONST、REF
+                // 右值可能是Array，也可能是Array, 6，所以要用逗号分隔
+                // 第一个元素是变量名，丢给变量名列表；第二个元素是参数，丢给文本列表
                 if (eqIndex == -1)
                 {
-                    var enumer = lineString.Split(' ')
-                        .Where(arg => !string.IsNullOrWhiteSpace(arg));
-                    // 大意了，怎么还有"#DIM Array,6"这种写法
-                    var name = enumer.LastOrDefault();
-                    int index = name.IndexOf(",");
-                    if (index > -1)
+                    int spIndex = lineString.IndexOf(" ");
+                    // 筛掉可能的SAVEDATA
+                    string rightValue = lineString.Substring(spIndex).Trim();
+                    if (rightValue.StartsWith("REF "))
                     {
-                        name = name.Substring(0, index);
+                        rightValue = rightValue.Substring(4);
                     }
-                    varNameList.Add(name);
+                    if (rightValue.StartsWith("CONST "))
+                    {
+                        rightValue = rightValue.Substring(6);
+                    }
+                    else if (rightValue.StartsWith("DYNAMIC "))
+                    {
+                        rightValue = rightValue.Substring(8);
+                    }
+                    else if (rightValue.StartsWith("SAVEDATA "))
+                    {
+                        rightValue = rightValue.Substring(9);
+                    }
+                    // 有逗号的话，左边扔去变量名，右边扔去文本；没有的话直接丢去变量名
+                    int cmIndex = rightValue.IndexOf(',');
+                    if (cmIndex != -1 && cmIndex + 1 < rightValue.Length)
+                    {
+                        string commaLeft = rightValue.Substring(0, cmIndex).Trim();
+                        string commaRight = rightValue.Substring(cmIndex + 1).Trim();
+                        varNameList.Add(commaLeft);
+                        textList.Add(commaRight);
+                    }
+                    else
+                    {
+                        varNameList.Add(rightValue);
+                    }
                 }
                 // 有等号的话，还要额外获取右值。右值可能是数字、字符串，可能会用逗号分隔。
                 // 字符串型可能会以"'="的方式赋值，不过变量在声明时无法引用，所以不必裁剪左值末尾的单引号
