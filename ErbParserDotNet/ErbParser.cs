@@ -173,6 +173,15 @@ public class ERBParser
                         .Select(arg => arg.Trim());
                 varNameList.Add(rightEnumer.FirstOrDefault());
             }
+            // FOR循环 int,int,int，逗号分隔后全部送去变量名
+            else if (lineString.StartsWith("FOR "))
+            {
+                var rightValue = lineString.Substring(4).Trim();
+                var enumer = rightValue.Split(',')
+                        .Where(arg => !string.IsNullOrWhiteSpace(arg))
+                        .Select(arg => arg.Trim());
+                varNameList.AddRange(enumer);
+            }
             // Switch-Case的Switch，右值拿去判别式解析
             else if (lineString.StartsWith("SELECTCASE "))
             {
@@ -269,14 +278,14 @@ public class ERBParser
                 varNameList.AddRange(vari);
                 textList.AddRange(text);
             }
-            // 乘算 TIMES int, float，直接把右值拿去解析吧，也别管参数类型了，麻烦
+            // 乘算 TIMES int, float，参数1提出来，把参数2整个弃掉
             else if (lineString.StartsWith("TIMES "))
             {
                 int spIndex = lineString.IndexOf(" ");
                 string rightValue = lineString.Substring(spIndex).TrimStart();
-                var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                int cmIndex = rightValue.IndexOf(",");
+                string varName = rightValue.Substring(0, cmIndex).Trim();
+                varNameList.Add(varName);
             }
             // 末尾匹配
             // 变量自增自减少

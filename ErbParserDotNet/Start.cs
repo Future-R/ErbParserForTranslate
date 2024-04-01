@@ -77,52 +77,52 @@ public static class Start
 
     static void Debug()
     {
-        var lineString = Tools.ReadLine("请输入：");
-        if (lineString.StartsWith("@"))
-        {
-            int start = lineString.IndexOf("(");
-            int end = start != -1 ? lineString.IndexOf(")", start) : -1;
-            // 函数在定义时要么只出现一对括号，要么没有括号而是用逗号划分
-            // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
-            if (start != -1 && start < end)
-            {
-                // 匹配函数名
-                string funcName = lineString.Substring(1, start - 1);
-                Console.WriteLine($"funcName:{funcName}");
+        //var lineString = Tools.ReadLine("请输入：");
+        //if (lineString.StartsWith("@"))
+        //{
+        //    int start = lineString.IndexOf("(");
+        //    int end = start != -1 ? lineString.IndexOf(")", start) : -1;
+        //    // 函数在定义时要么只出现一对括号，要么没有括号而是用逗号划分
+        //    // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
+        //    if (start != -1 && start < end)
+        //    {
+        //        // 匹配函数名
+        //        string funcName = lineString.Substring(1, start - 1);
+        //        Console.WriteLine($"funcName:{funcName}");
 
-                string args = lineString.Substring(start + 1, end - start - 1);
-                var tokens = args.Split(',')
-                    .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                    .Select(arg => arg.Trim());
-                // 参数Token里可能不止参数名，还可能有 参数名 = "初始值"，此时判断右值是否为字符串，是字符串的话扔到text里
-                foreach (var token in tokens)
-                {
-                    string[] parts = token.Split('=');
-                    Console.WriteLine($"funcName:{parts[0].Trim()}");
-                    if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
-                    {
-                        Console.WriteLine($"text:{parts[1].Trim()}");
-                    }
-                }
-            }
-            else
-            {
-                var enumer = lineString.Split(',')
-                    .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                    .Select(arg => arg.Trim());
-                // enumer.FirstOrDefault()是函数名，不需要翻译，所以SKIP(1)
-                // 其它成员是参数名
-                foreach (var token in enumer.Skip(1))
-                {
-                    string[] parts = token.Split('=');
-                    Console.WriteLine($"funcName:{parts[0].Trim()}");
-                    if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
-                    {
-                        Console.WriteLine($"text:{parts[1].Trim()}");
-                    }
-                }
-            }
-        }
+        //        string args = lineString.Substring(start + 1, end - start - 1);
+        //        var tokens = args.Split(',')
+        //            .Where(arg => !string.IsNullOrWhiteSpace(arg))
+        //            .Select(arg => arg.Trim());
+        //        // 参数Token里可能不止参数名，还可能有 参数名 = "初始值"，此时判断右值是否为字符串，是字符串的话扔到text里
+        //        foreach (var token in tokens)
+        //        {
+        //            string[] parts = token.Split('=');
+        //            Console.WriteLine($"funcName:{parts[0].Trim()}");
+        //            if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
+        //            {
+        //                Console.WriteLine($"text:{parts[1].Trim()}");
+        //            }
+        //        }
+        //    }
+        //    else
+        //    {
+        //        var enumer = lineString.Split(',')
+        //            .Where(arg => !string.IsNullOrWhiteSpace(arg))
+        //            .Select(arg => arg.Trim());
+        //        // enumer.FirstOrDefault()是函数名，不需要翻译，所以SKIP(1)
+        //        // 其它成员是参数名
+        //        foreach (var token in enumer.Skip(1))
+        //        {
+        //            string[] parts = token.Split('=');
+        //            Console.WriteLine($"funcName:{parts[0].Trim()}");
+        //            if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
+        //            {
+        //                Console.WriteLine($"text:{parts[1].Trim()}");
+        //            }
+        //        }
+        //    }
+        //}
 
         //var test = Tools.ReadLine("请输入：");
         //if (test.StartsWith("@") || test.StartsWith("CALL") || test.StartsWith("TRYCALL"))
@@ -157,14 +157,18 @@ public static class Start
         //    Console.WriteLine($"【文本】{item}");
         //}
 
-        //AhoCorasick ahoCorasick = new AhoCorasick();
-        //ahoCorasick.AddPattern("ABDCEFG", "abcd");
-        //ahoCorasick.AddPattern("ABC", "defg");
-        //ahoCorasick.AddPattern("EF", "ef");
-        //ahoCorasick.Build();
-        //var test = "23,ABCDEFGHIJKABC";
-        //test = ahoCorasick.Process(test);
-        //Console.WriteLine(test);
+        AhoCorasick ahoCorasick = new AhoCorasick();
+        ahoCorasick.AddPattern("素材条件固カテゴリ", "素材条件固字段");
+        ahoCorasick.AddPattern("素材条件カテゴリ", "素材条件字段");
+        ahoCorasick.AddPattern("カテゴリ", "字段");
+        ahoCorasick.Build();
+        var test = @"#DIMS 素材条件カテゴリ,40
+#DIMS 素材条件固カテゴリ,40
+#DIMS 指定素材カテゴリ
+#DIMS 指定素材名前
+#DIM 指定素材属性";
+        test = ahoCorasick.Process(test);
+        Console.WriteLine(test);
     }
 
     static void Settings()
@@ -219,7 +223,7 @@ public static class Start
         {
             string 待处理文本 = File.ReadAllText(文件名);
             待处理文本 = Tools.ACReplace(待处理文本, 修正字典);
-            File.WriteAllText(文件名, 待处理文本);
+            File.WriteAllText(文件名, 待处理文本, Configs.fileEncoding);
         }
         Console.WriteLine("替换完毕！");
         Timer.Stop();
