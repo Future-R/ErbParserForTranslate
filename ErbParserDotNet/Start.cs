@@ -158,15 +158,11 @@ public static class Start
         //}
 
         AhoCorasick ahoCorasick = new AhoCorasick();
-        ahoCorasick.AddPattern("素材条件固カテゴリ", "素材条件固字段");
-        ahoCorasick.AddPattern("素材条件カテゴリ", "素材条件字段");
-        ahoCorasick.AddPattern("カテゴリ", "字段");
+        ahoCorasick.AddPattern("ABCDEFGH", "abcdefgh");
+        ahoCorasick.AddPattern("CDEF", "cdef");
+        ahoCorasick.AddPattern("EFG", "efg");
         ahoCorasick.Build();
-        var test = @"#DIMS 素材条件カテゴリ,40
-#DIMS 素材条件固カテゴリ,40
-#DIMS 指定素材カテゴリ
-#DIMS 指定素材名前
-#DIM 指定素材属性";
+        var test = @"ABCDEFGG";
         test = ahoCorasick.Process(test);
         Console.WriteLine(test);
     }
@@ -222,7 +218,7 @@ public static class Start
         foreach (var 文件名 in 文件名List)
         {
             string 待处理文本 = File.ReadAllText(文件名);
-            待处理文本 = Tools.ACReplace(待处理文本, 修正字典);
+            待处理文本 = Tools.RegexReplace(待处理文本, 修正字典);
             File.WriteAllText(文件名, 待处理文本, Configs.fileEncoding);
         }
         Console.WriteLine("替换完毕！");
@@ -288,7 +284,7 @@ public static class Start
                     // 读取游戏脚本
                     string scriptContent = File.ReadAllText(targetFile, Configs.fileEncoding);
                     // 使用字典替换原文
-                    scriptContent = Tools.ACReplace(scriptContent, jsonArray);
+                    scriptContent = Tools.RegexReplace(scriptContent, jsonArray);
                     // 覆盖写入
                     File.WriteAllText(targetFile, scriptContent, Configs.fileEncoding);
                 }

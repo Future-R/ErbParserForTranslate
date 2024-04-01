@@ -70,6 +70,10 @@ public class AhoCorasick
             char c = text[i];
             Node success = _root;
             // 如果当前节点没有对应的子节点，通过失败指针继续匹配
+            // 这里有BUG，如果匹配失败，会跳过包含的匹配
+            // 比如使用"ABCDEFGH"匹配"ABCDEFGG"，匹配到G就会回到失败节点继续在当前字符位置向后匹配
+            // 如果有可匹配的"BCDE"也会被跳过
+            // 我暂时不知道怎么处理，先放弃了，换正则来实现
             while (node != _root && !node.Children.ContainsKey(c))
             {
                 node = node.Failure;
@@ -86,6 +90,7 @@ public class AhoCorasick
                 {
                     if (node.Translation != null)
                     {
+                        Console.WriteLine($"匹配到了{node.Translation}");
                         success = node;
                         depth = -1;
                     }

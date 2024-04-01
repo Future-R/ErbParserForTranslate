@@ -191,4 +191,50 @@ public static class Tools
         ahoCorasick.Build();
         return ahoCorasick.Process(gameContent);
     }
+
+    /// <summary>
+    /// 正则匹配并替换
+    /// </summary>
+    /// <param name="gameContent"></param>
+    /// <param name="jsonArray"></param>
+    /// <returns></returns>
+    public static string RegexReplace(string gameContent, JArray jsonArray)
+    {
+        Dictionary<string, string> replacements = new Dictionary<string, string>();
+        var dictObjs = jsonArray.ToObject<List<JObject>>()
+            .Where(obj => (int)obj["stage"].ToObject(typeof(int)) > 0)
+            .OrderByDescending(obj => obj["original"].ToString().Length);
+        foreach (var dictObj in dictObjs)
+        {
+            string key = dictObj["original"].ToString();
+            string value = dictObj["translation"].ToString();
+
+            if (!replacements.ContainsKey(key))
+            {
+                replacements.Add(key, value);
+            }
+        }
+
+        // 创建正则表达式对象
+        List<string> escapedKeys = new List<string>();
+        foreach (string key in replacements.Keys)
+        {
+            escapedKeys.Add(Regex.Escape(key));
+        }
+        Regex regex = new Regex(string.Join("|", escapedKeys));
+
+        // 使用正则表达式替换字符串中的所有匹配项
+        return regex.Replace(gameContent, match =>
+        {
+            string value;
+            if (replacements.TryGetValue(match.Value, out value))
+            {
+                return value;
+            }
+            else
+            {
+                return match.Value;
+            }
+        });
+    }
 }
