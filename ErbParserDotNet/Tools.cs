@@ -45,8 +45,9 @@ public static class Tools
     /// </summary>
     public static void Init()
     {
-        string kw_eng = @"[_a-zA-Z0-9]*";
-        engArrayFilter = new Regex($@"^{kw_eng}(:{kw_eng}){{0,2}}$", RegexOptions.Compiled);
+        string kw_eng = @"[()_a-zA-Z0-9]*";
+        // 前面加上正负号，就顺便把纯数也包含进来一起判断了
+        engArrayFilter = new Regex($@"^[-+]?{kw_eng}(:{kw_eng}){{0,2}}$", RegexOptions.Compiled);
 
         string kw___var__ = "(?:__(?:FILE|FUNCTION|INT_MAX|INT_MIN|LINE)__)";
         string kw_BASE = "(?:(?:DOWN|LOSE|MAX)?BASE)";

@@ -18,6 +18,7 @@ public class CSVParser
         {
             // 修剪行末注释，刚刚知道原来括号也是注释
             var indexA = line.IndexOf(';');
+            if (indexA == 0) continue;
             var contentWithoutComment = indexA != -1 ? line.Substring(0, indexA) : line;
             var indexB = contentWithoutComment.IndexOf('(');
             contentWithoutComment = indexB != -1 ? contentWithoutComment.Substring(0, indexB) : contentWithoutComment;

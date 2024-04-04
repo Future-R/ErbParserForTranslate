@@ -65,7 +65,7 @@ class ExpressionParser
                         temp += expression[++i];
                     }
                     // 左边如果是英文，暴力判断为函数，把函数名从变量名列表中remove
-                    if (temp == "(" && Char.IsLetter(lastChar) && variables.Count > 0)
+                    if (temp == "(" && IsEngChar(lastChar) && variables.Count > 0)
                     {
                         variables.RemoveAt(variables.Count - 1);
                     }
@@ -92,6 +92,10 @@ class ExpressionParser
             lastChar = expression[i];
         }
         return (vari: variables, text: constants);
+    }
+    public static bool IsEngChar(char c)
+    {
+        return (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
     }
 
     public static bool IsAllowChar(char c)

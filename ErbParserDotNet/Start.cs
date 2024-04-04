@@ -124,21 +124,21 @@ public static class Start
         //    }
         //}
 
-        //var test = Tools.ReadLine("请输入：");
-        //if (test.StartsWith("@") || test.StartsWith("CALL") || test.StartsWith("TRYCALL"))
-        //{
-        //    int spIndex = test.IndexOf(" ");
-        //    string rightValue = test.Substring(spIndex).Trim();
-        //    var (vari, text) = ExpressionParser.Slash(rightValue);
-        //    foreach (var item in vari)
-        //    {
-        //        Console.WriteLine($"【变量】{item}");
-        //    }
-        //    foreach (var item in text)
-        //    {
-        //        Console.WriteLine($"【文本】{item}");
-        //    }
-        //}
+        var test = Tools.ReadLine("请输入：");
+        if (test.StartsWith("IF ") || test.StartsWith("SIF ") || test.StartsWith("ELSEIF ") || test.StartsWith("CASE "))
+        {
+            int spIndex = test.IndexOf(" ");
+            string rightValue = test.Substring(spIndex).Trim();
+            var (vari, text) = ExpressionParser.Slash(rightValue);
+            foreach (var item in vari)
+            {
+                Console.WriteLine($"【变量】{item}");
+            }
+            foreach (var item in text)
+            {
+                Console.WriteLine($"【文本】{item}");
+            }
+        }
 
         //var test = Tools.ReadLine("请输入：");
         //string kw_eng = @"[_a-zA-Z0-9]*";
@@ -157,14 +157,14 @@ public static class Start
         //    Console.WriteLine($"【文本】{item}");
         //}
 
-        AhoCorasick ahoCorasick = new AhoCorasick();
-        ahoCorasick.AddPattern("ABCDEFGH", "abcdefgh");
-        ahoCorasick.AddPattern("CDEF", "cdef");
-        ahoCorasick.AddPattern("EFG", "efg");
-        ahoCorasick.Build();
-        var test = @"ABCDEFGG";
-        test = ahoCorasick.Process(test);
-        Console.WriteLine(test);
+        //AhoCorasick ahoCorasick = new AhoCorasick();
+        //ahoCorasick.AddPattern("ABCDEFGH", "abcdefgh");
+        //ahoCorasick.AddPattern("CDEF", "cdef");
+        //ahoCorasick.AddPattern("EFG", "efg");
+        //ahoCorasick.Build();
+        //var test = @"ABCDEFGG";
+        //test = ahoCorasick.Process(test);
+        //Console.WriteLine(test);
     }
 
     static void Settings()
@@ -175,11 +175,16 @@ public static class Start
         Configs.Init();
     }
 
-    /// <summary>
-    /// 虽然说要检查变量名，但具体要怎么给用户交互呢？
-    /// 不断弹出选项让用户输入序号还是？
-    /// 百分号和花括号要检查吗？
-    /// </summary>
+    // 虽然说要检查变量名，但具体要怎么给用户交互呢？
+    // 不断弹出选项让用户输入序号还是？
+    // 百分号和花括号要检查吗？
+    // 还是做一个纯显示的检查，让用户自己去PZ上改呢？
+    // 总之要先遍历所有字典到内存里
+    // 然后开一个变量名字典
+    // CSV直接扔进去
+    // 遇到变量键值就trim掉引号，往里扔
+    // 遇到成对的百分号和成对的花括号就trim掉百分号和花括号扔去解析（如果是嵌套就算了）
+    // 啊不行，感觉行不通，放弃了，打游戏
     static void CheckVariable()
     {
 

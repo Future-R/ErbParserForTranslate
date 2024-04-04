@@ -37,16 +37,31 @@ public class ERBParser
         foreach (string line in lineList)
         {
             string lineString = line.TrimStart();
-            // 匹配注释，暂不考虑处理注释添加到行尾的傻逼情况
-            // erb注释的优先级居然比print低，也就是说我捕获到';'也不能简单以';'分隔，还要判断前面有没有输出指令
-            // 后续一切处理都是以注释已被筛掉为前提
-            if (lineString.StartsWith(";")) continue;
+            // 匹配注释，注释可能在行尾
+            // 注释的优先级居然比print低
+            int cmtIndex = lineString.IndexOf(';');
+            switch (cmtIndex)
+            {
+                // 没有分号，正常通过
+                case -1:
+                    break;
+                // 分号在首位，跳过这次循环
+                case 0:
+                    continue;
+                // 分号不在首位，检查前面是否是PRINT，如果是，正常通过；如果不是，把分号后的内容移除
+                default:
+                    if (!lineString.StartsWith("PRINT"))
+                    {
+                        lineString = lineString.Substring(0, cmtIndex).TrimEnd();
+                    }
+                    break;
+            }
             // 匹配函数
             // 只匹配了声明用的@
-            else if (lineString.StartsWith("@"))
+            if (lineString.StartsWith("@"))
             {
-                int start = lineString.IndexOf("(");
-                int end = start != -1 ? lineString.IndexOf(")", start) : -1;
+                int start = lineString.IndexOf('(');
+                int end = start != -1 ? lineString.LastIndexOf(')', start) : -1;
                 // 函数在定义时要么只出现一对括号，要么没有括号而是用逗号划分
                 // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
                 if (start != -1 && start < end)
@@ -75,8 +90,9 @@ public class ERBParser
                     var enumer = lineString.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                    // enumer.FirstOrDefault()是函数名，不需要翻译，所以SKIP(1)
+                    // enumer.FirstOrDefault()是函数名，也可能需要翻译，但需要去除前面的@
                     // 其它成员是参数名
+                    varNameList.Add(enumer.FirstOrDefault().TrimStart('@'));
                     foreach (var token in enumer.Skip(1))
                     {
                         string[] parts = token.Split('=');
@@ -172,6 +188,23 @@ public class ERBParser
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
                 varNameList.Add(rightEnumer.FirstOrDefault());
+            }
+            // SETVAR	string, any
+            else if (lineString.StartsWith("SETVAR"))
+            {
+                var rightValue = lineString.Substring(6).Trim();
+                int cmIndex = rightValue.IndexOf(",");
+                if (cmIndex != -1 && cmIndex + 1 < rightValue.Length)
+                {
+                    string commaLeft = rightValue.Substring(0, cmIndex).Trim();
+                    string commaRight = rightValue.Substring(cmIndex + 1).Trim();
+                    textList.Add(commaLeft);
+                    // 参数2如果是纯数就不翻译了
+                    if (!int.TryParse(commaRight, out _))
+                    {
+                        textList.Add(commaRight);
+                    }
+                }
             }
             // FOR循环 int,int,int，逗号分隔后全部送去变量名
             else if (lineString.StartsWith("FOR "))
@@ -331,7 +364,7 @@ public class ERBParser
     public List<string> VarNameListFilter(List<string> originalList)
     {
         return originalList.Distinct()
-            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token) && !IsNaturalNumber(token))
+            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token))
             .ToList();
     }
     // 合并重复成员，过滤纯英文和纯数字
@@ -340,7 +373,7 @@ public class ERBParser
     {
         return originalList
             .Distinct()
-            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token) && !IsNaturalNumber(token))
+            .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token))
             .ToList();
     }
 
