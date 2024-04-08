@@ -29,6 +29,11 @@ public static class Tools
     public static Regex lastNum;
 
     /// <summary>
+    /// 匹配函数定义
+    /// </summary>
+    public static Regex dimFunction;
+
+    /// <summary>
     /// 全局变量，似乎暂时用不到
     /// </summary>
     private static readonly string[] OriginVarName = new[]
@@ -66,6 +71,8 @@ public static class Tools
         sysArrayFilter = new Regex($"^{kw_variable}(:{kw_variable}){{0,2}}$", RegexOptions.Compiled);
 
         lastNum = new Regex(@"(\d+)(?=\D*$)", RegexOptions.Compiled);
+
+        dimFunction = new Regex(@"(\w+)\((.*?)\)", RegexOptions.Compiled);
     }
 
     /// <summary>

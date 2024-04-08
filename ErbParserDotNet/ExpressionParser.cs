@@ -64,8 +64,8 @@ class ExpressionParser
                     {
                         temp += expression[++i];
                     }
-                    // 左边如果是英文，暴力判断为函数，把函数名从变量名列表中remove
-                    if (temp == "(" && IsEngChar(lastChar) && variables.Count > 0)
+                    // 左边如果是英文或数字，暴力判断为函数，把函数名从变量名列表中remove
+                    if (temp == "(" && (IsEngChar(lastChar) || Char.IsDigit(lastChar)) && variables.Count > 0)
                     {
                         variables.RemoveAt(variables.Count - 1);
                     }

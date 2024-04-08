@@ -60,30 +60,10 @@ public class ERBParser
             // 只匹配了声明用的@
             if (lineString.StartsWith("@"))
             {
-                int start = lineString.IndexOf('(');
-                int end = start != -1 ? lineString.LastIndexOf(')', start) : -1;
                 // 函数在定义时要么只出现一对括号，要么没有括号而是用逗号划分
-                // 左括号索引小于右括号索引，且左括号索引不为-1，说明匹配到正确的括号了
-                if (start != -1 && start < end)
+                if (lineString.Contains('(') && lineString.Contains(')'))
                 {
-                    // 匹配函数名，只要@不紧接着左括号就没问题，真紧接了也是源代码有问题
-                    string funcName = lineString.Substring(1, start - 1);
-                    varNameList.Add(funcName);
-
-                    string args = lineString.Substring(start + 1, end - start - 1);
-                    var tokens = args.Split(',')
-                        .Where(arg => !string.IsNullOrWhiteSpace(arg))
-                        .Select(arg => arg.Trim());
-                    // 参数Token里可能不止参数名，还可能有 参数名 = "初始值"，此时判断右值是否为字符串，是字符串的话扔到text里
-                    foreach (var token in tokens)
-                    {
-                        string[] parts = token.Split('=');
-                        varNameList.Add(parts[0].Trim());
-                        if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
-                        {
-                            textList.Add(parts[1].Trim());
-                        }
-                    }
+                    simpleFuncExpression(lineString.Substring(1));
                 }
                 else
                 {
@@ -349,7 +329,7 @@ public class ERBParser
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
-                if (lineString.Contains("+=") || lineString.Contains("-="))
+                if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/="))
                 {
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari);
@@ -573,6 +553,63 @@ public class ERBParser
         }
 
         return resultList;
+    }
+
+    /// <summary>
+    /// 仅用于定义function(arg,arg = "")形式的解析
+    /// </summary>
+    /// <param name="function"></param>
+    public void simpleFuncExpression(string function)
+    {
+        Match match = Tools.dimFunction.Match(function);
+
+        if (match.Success)
+        {
+            string funcName = match.Groups[1].Value;
+            if (!Tools.engArrayFilter.IsMatch(funcName))
+            {
+                //Console.WriteLine("函数名: " + funcName);
+                varNameList.Add(funcName);
+            }
+
+            string args = match.Groups[2].Value;
+            string[] argArray = args.Split(',');
+
+            for (int i = 0; i < argArray.Length; i++)
+            {
+                string arg = argArray[i].Trim();
+                string[] argParts = arg.Split('=');
+
+                string argName = argParts[0].Trim();
+                if (!Tools.engArrayFilter.IsMatch(argName))
+                {
+                    //Console.WriteLine("参数名: " + argName);
+                    varNameList.Add(argName);
+                }
+                    
+
+                if (argParts.Length > 1)
+                {
+                    string argV = argParts[1].Trim();
+                    if (!Tools.engArrayFilter.IsMatch(argV))
+                    {
+                        if (argV[0] == '"')
+                        {
+                            if (argV.Length > 2)
+                            {
+                                //Console.WriteLine("参数值: " + argParts[1].Trim());
+                                textList.Add(argV);
+                            }
+                        }
+                        else
+                        {
+                            //Console.WriteLine("参数名: " + argParts[1].Trim());
+                            varNameList.Add(argV);
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }

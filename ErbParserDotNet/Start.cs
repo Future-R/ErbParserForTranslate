@@ -124,21 +124,25 @@ public static class Start
         //    }
         //}
 
+        //var test = Tools.ReadLine("请输入：");
+        //if (test.StartsWith("IF ") || test.StartsWith("SIF ") || test.StartsWith("ELSEIF ") || test.StartsWith("CASE "))
+        //{
+        //    int spIndex = test.IndexOf(" ");
+        //    string rightValue = test.Substring(spIndex).Trim();
+        //    var (vari, text) = ExpressionParser.Slash(rightValue);
+        //    foreach (var item in vari)
+        //    {
+        //        Console.WriteLine($"【变量】{item}");
+        //    }
+        //    foreach (var item in text)
+        //    {
+        //        Console.WriteLine($"【文本】{item}");
+        //    }
+        //}
+
         var test = Tools.ReadLine("请输入：");
-        if (test.StartsWith("IF ") || test.StartsWith("SIF ") || test.StartsWith("ELSEIF ") || test.StartsWith("CASE "))
-        {
-            int spIndex = test.IndexOf(" ");
-            string rightValue = test.Substring(spIndex).Trim();
-            var (vari, text) = ExpressionParser.Slash(rightValue);
-            foreach (var item in vari)
-            {
-                Console.WriteLine($"【变量】{item}");
-            }
-            foreach (var item in text)
-            {
-                Console.WriteLine($"【文本】{item}");
-            }
-        }
+        ERBParser eRBParser = new ERBParser();
+        eRBParser.simpleFuncExpression(test);
 
         //var test = Tools.ReadLine("请输入：");
         //string kw_eng = @"[_a-zA-Z0-9]*";
