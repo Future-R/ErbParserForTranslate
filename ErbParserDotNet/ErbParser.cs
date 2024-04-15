@@ -178,12 +178,11 @@ public class ERBParser
                 {
                     string commaLeft = rightValue.Substring(0, cmIndex).Trim();
                     string commaRight = rightValue.Substring(cmIndex + 1).Trim();
-                    textList.Add(commaLeft);
-                    // 参数2如果是纯数就不翻译了
-                    if (!int.TryParse(commaRight, out _))
-                    {
-                        textList.Add(commaRight);
-                    }
+                    varNameList.Add(commaLeft.TrimStart('@').Trim());
+                    // 参数2扔去解析
+                    var (vari, text) = ExpressionParser.Slash(commaRight);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
                 }
             }
             // FOR循环 int,int,int，逗号分隔后全部送去变量名
@@ -586,7 +585,7 @@ public class ERBParser
                     //Console.WriteLine("参数名: " + argName);
                     varNameList.Add(argName);
                 }
-                    
+
 
                 if (argParts.Length > 1)
                 {

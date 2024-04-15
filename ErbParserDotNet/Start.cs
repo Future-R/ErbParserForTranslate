@@ -140,9 +140,9 @@ public static class Start
         //    }
         //}
 
-        var test = Tools.ReadLine("请输入：");
-        ERBParser eRBParser = new ERBParser();
-        eRBParser.simpleFuncExpression(test);
+        //var test = Tools.ReadLine("请输入：");
+        //ERBParser eRBParser = new ERBParser();
+        //eRBParser.simpleFuncExpression(test);
 
         //var test = Tools.ReadLine("请输入：");
         //string kw_eng = @"[_a-zA-Z0-9]*";
@@ -151,15 +151,15 @@ public static class Start
         //var isNum = int.TryParse(test, out int n) && n >= 0;
         //Console.WriteLine($"isArray:{isArray};isNum:{isNum}");
 
-        //var test = ExpressionParser.Slash(Tools.ReadLine("请输入："));
-        //foreach (var item in test.vari)
-        //{
-        //    Console.WriteLine($"【变量】{item}");
-        //}
-        //foreach (var item in test.text)
-        //{
-        //    Console.WriteLine($"【文本】{item}");
-        //}
+        var test = ExpressionParser.Slash(Tools.ReadLine("请输入："));
+        foreach (var item in test.vari)
+        {
+            Console.WriteLine($"【变量】{item}");
+        }
+        foreach (var item in test.text)
+        {
+            Console.WriteLine($"【文本】{item}");
+        }
 
         //AhoCorasick ahoCorasick = new AhoCorasick();
         //ahoCorasick.AddPattern("ABCDEFGH", "abcdefgh");
@@ -521,6 +521,7 @@ public static class Start
                                 ["original"] = text,
                                 ["translation"] = ""
                             });
+                            Console.WriteLine($"[CSV]{text}");
                             // 仅在成功添加新条目时，才自增序号
                             index++;
                         }
@@ -604,6 +605,7 @@ public static class Start
                                 ["original"] = varName,
                                 ["translation"] = ""
                             });
+                            Console.WriteLine($"[变量]{varName}");
                             // 仅在成功添加新条目时，才自增序号
                             index++;
                         }
@@ -629,6 +631,7 @@ public static class Start
                                 ["original"] = text,
                                 ["translation"] = ""
                             });
+                            Console.WriteLine($"[文本]{text}");
                             // 仅在成功添加新条目时，才自增序号
                             index++;
                         }
