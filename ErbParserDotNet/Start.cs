@@ -31,10 +31,12 @@ public static class Start
 [1] - 提取文本到字典
 [2] - 补充新版本条目到字典
 [3] - 从已汉化本体中提取字典
-[4] - 检查字典变量名（制作中）
-[5] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
-[6] - 设置
-[7] - 访问项目主页";
+[4] - 将PT字典转换成MTool字典（TODO）
+[5] - 将MTool机翻导入PT字典（测试）
+[6] - 检查字典变量名（制作中）
+[7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
+[8] - 设置
+[9] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -54,12 +56,18 @@ public static class Start
                     CheckVariable();
                     break;
                 case "5":
-                    暴力修正();
+                    机翻导入();
                     break;
                 case "6":
-                    Settings();
+                    CheckVariable();
                     break;
                 case "7":
+                    暴力修正();
+                    break;
+                case "8":
+                    Settings();
+                    break;
+                case "9":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -179,6 +187,71 @@ public static class Start
         Configs.Init();
     }
 
+    static void 机翻导入()
+    {
+        // 获取pt的人力译文json文件名
+        Console.WriteLine("请拖入人力译文PT字典目录：");
+        string[] PT文件名组 = Directory.GetFiles(Console.ReadLine(), "*.json", SearchOption.AllDirectories);
+
+        // 获取era的人力译文json文件名
+        Console.WriteLine("请拖入MTool机翻字典目录（M字典文件名要和原PT字典完全一致）：");
+        string[] ERA文件名组 = Directory.GetFiles(Console.ReadLine(), "*.json", SearchOption.AllDirectories);
+
+        // 把erajson提前读出来备好，免得每看到一个未翻译都要读一遍文件
+        Dictionary<string, JObject> 机翻字典 = new Dictionary<string, JObject>();
+        foreach (var erajson in ERA文件名组)
+        {
+            string 文件名 = Path.GetFileName(erajson);
+            string json输入 = File.ReadAllText(erajson);
+            if (json输入.StartsWith("{"))
+            {
+                JObject jobj = JObject.Parse(json输入);
+                机翻字典.Add(文件名, jobj);
+            }
+        }
+
+
+        foreach (var jsonFile in PT文件名组)
+        {
+            string jsonContent = File.ReadAllText(jsonFile);
+            // pt的json都是[起头的
+            if (!jsonContent.StartsWith("["))
+            {
+                break;
+            }
+            JArray jsonArray = JArray.Parse(jsonContent);
+
+            string 文件名 = Path.GetFileName(jsonFile);
+
+            if (!机翻字典.ContainsKey(文件名))
+            {
+                Console.WriteLine($"【警告】找不到名为{文件名}的机翻字典！");
+                continue;
+            }
+
+            List<JObject> PTobj = jsonArray.ToObject<List<JObject>>();
+
+            for (int i = 0; i < PTobj.Count; i++)
+            {
+                string 原文 = PTobj[i]["original"].ToString();
+                if ((int)PTobj[i]["stage"].ToObject(typeof(int)) == 0)
+                {
+                    // 如果未翻译，且机翻字典里有对应条目，则用机翻字典覆盖
+                    if (机翻字典[文件名].ContainsKey(原文))
+                    {
+                        PTobj[i]["translation"] = 机翻字典[文件名][原文];
+                        PTobj[i]["stage"] = 1;
+                    }
+                }
+            }
+
+            string 输出文件名 = @"\\NEW_" + 文件名;
+            string json输出 = JsonConvert.SerializeObject(PTobj, Formatting.Indented);
+            File.WriteAllText(Path.GetDirectoryName(jsonFile) + 输出文件名, json输出);
+        }
+        Console.WriteLine("已生成到PT目录！");
+    }
+
     // 虽然说要检查变量名，但具体要怎么给用户交互呢？
     // 不断弹出选项让用户输入序号还是？
     // 百分号和花括号要检查吗？
@@ -192,6 +265,15 @@ public static class Start
     static void CheckVariable()
     {
 
+    }
+
+    // 读取CSV和ERB，将已翻译的条目分别放到CSV字典和ERB字典，分字典是需要csv的优先级比erb高，本来还需要erh，但现在已经无法区分了
+    // 然后检查未翻译的条目，如果存在翻译，根据键值找到对应文件以及对应条目
+    static void FillTranz()
+    {
+        string transFileDirectory = Tools.ReadLine("请拖入放置CSV和ERB目录的译文目录：");
+        string[] files = Directory.GetFiles(Console.ReadLine(), "*.*", SearchOption.AllDirectories);
+        // TODO
     }
 
     static void 暴力修正()
@@ -224,14 +306,19 @@ public static class Start
         // 合并后要去除尾逗号，再加回方括号
         string 合并后的字符串 = "[" + pt输入.ToString().TrimEnd(',') + "]";
         JArray 修正字典 = JArray.Parse(合并后的字符串);
+        Timer.Stop();
+        Console.WriteLine("字典翻译导入完成！");
+
+        Timer.Start();
         foreach (var 文件名 in 文件名List)
         {
             string 待处理文本 = File.ReadAllText(文件名);
             待处理文本 = Tools.RegexReplace(待处理文本, 修正字典);
             File.WriteAllText(文件名, 待处理文本, Configs.fileEncoding);
         }
-        Console.WriteLine("替换完毕！");
         Timer.Stop();
+        Console.WriteLine("替换完毕！");
+        
     }
 
     /// <summary>
