@@ -33,7 +33,7 @@ public static class Start
 [3] - 从已汉化本体中提取字典
 [4] - 将PT字典转换成MTool字典（TODO）
 [5] - 将MTool机翻导入PT字典（测试）
-[6] - 检查字典变量名（制作中）
+[6] - 检查字典变量名（在做了）
 [7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
 [8] - 设置
 [9] - 访问项目主页";
@@ -133,18 +133,15 @@ public static class Start
         //}
 
         //var test = Tools.ReadLine("请输入：");
-        //if (test.StartsWith("IF ") || test.StartsWith("SIF ") || test.StartsWith("ELSEIF ") || test.StartsWith("CASE "))
+        //if (test.StartsWith("VARSET "))
         //{
-        //    int spIndex = test.IndexOf(" ");
-        //    string rightValue = test.Substring(spIndex).Trim();
-        //    var (vari, text) = ExpressionParser.Slash(rightValue);
-        //    foreach (var item in vari)
+        //    var rightValue = test.Substring(6).Trim();
+        //    var rightEnumer = rightValue.Split(',')
+        //            .Where(arg => !string.IsNullOrWhiteSpace(arg))
+        //            .Select(arg => arg.Trim());
+        //    foreach (var item in rightEnumer)
         //    {
-        //        Console.WriteLine($"【变量】{item}");
-        //    }
-        //    foreach (var item in text)
-        //    {
-        //        Console.WriteLine($"【文本】{item}");
+        //        Console.WriteLine(item);
         //    }
         //}
 
@@ -279,8 +276,8 @@ public static class Start
     static void 暴力修正()
     {
         // 获取指定目录下的所有文件
-        Console.WriteLine("请拖入游戏根目录：（做好备份）");
-        string[] files = Directory.GetFiles(Console.ReadLine(), "*.*", SearchOption.AllDirectories);
+        string gameDirectory = Tools.ReadLine("请拖入游戏根目录：（做好备份）");
+        string[] files = Directory.GetFiles(gameDirectory, "*.*", SearchOption.AllDirectories);
 
         // 筛选出指定类型的文件
         List<string> 文件名List = new List<string>();
@@ -339,18 +336,19 @@ public static class Start
             bool isCSV = relativePath.StartsWith("CSV");
             bool fileExist = false;
             // 得到输出路径
-            var targetFile = Path.Combine(gameDirectory, relativePath);
+            var targetPath = Path.Combine(gameDirectory, relativePath);
+
+            // 考虑到有erb、erh同名的情况
+            List<string> targetFiles = new List<string>();
 
             // 遍历所有可能的扩展，后悔之前多手把扩展截掉了，现在想改稍微有点麻烦
             foreach (var ext in Configs.extensions)
             {
-                string newFile = Path.ChangeExtension(targetFile, ext);
+                string newFile = Path.ChangeExtension(targetPath, ext);
                 if (File.Exists(newFile))
                 {
-                    // 得到输出文件后缀
-                    targetFile = newFile;
+                    targetFiles.Add(newFile);
                     fileExist = true;
-                    break;
                 }
             }
             // 如果目标脚本不存在，跳过这一条并报错
@@ -358,11 +356,11 @@ public static class Start
             {
                 if (isCSV)
                 {
-                    Console.WriteLine($"【错误】：没找到{targetFile}.CSV！");
+                    Console.WriteLine($"【错误】：没找到{targetPath}.CSV！");
                 }
                 else
                 {
-                    Console.WriteLine($"【错误】：没找到{targetFile}的ERB脚本！");
+                    Console.WriteLine($"【错误】：没找到{targetPath}的ERB脚本！");
                 }
             }
             else
@@ -376,13 +374,18 @@ public static class Start
                 }
                 else
                 {
+                    // 读取pt脚本
                     JArray jsonArray = JArray.Parse(ptJsonContent);
-                    // 读取游戏脚本
-                    string scriptContent = File.ReadAllText(targetFile, Configs.fileEncoding);
-                    // 使用字典替换原文
-                    scriptContent = Tools.RegexReplace(scriptContent, jsonArray);
-                    // 覆盖写入
-                    File.WriteAllText(targetFile, scriptContent, Configs.fileEncoding);
+                    
+                    foreach (var item in targetFiles)
+                    {
+                        // 读取游戏脚本
+                        string scriptContent = File.ReadAllText(item, Configs.fileEncoding);
+                        // 使用字典替换原文
+                        scriptContent = Tools.RegexReplace(scriptContent, jsonArray);
+                        // 覆盖写入
+                        File.WriteAllText(item, scriptContent, Configs.fileEncoding);
+                    }
                 }
             }
         });

@@ -167,7 +167,7 @@ public class ERBParser
                 var rightEnumer = rightValue.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                varNameList.Add(rightEnumer.FirstOrDefault());
+                varNameList.AddRange(rightEnumer);
             }
             // SETVAR	string, any
             else if (lineString.StartsWith("SETVAR"))
@@ -328,7 +328,7 @@ public class ERBParser
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
-                if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/="))
+                if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/=") || lineString.Contains("&=") || lineString.Contains("|="))
                 {
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari);

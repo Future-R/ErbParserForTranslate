@@ -100,25 +100,14 @@ class ExpressionParser
 
     public static bool IsAllowChar(char c)
     {
-        // 下划线
-        if (c == '_')
-        {
-            return true;
-        }
-
-        // 字母和汉字
-        if (char.IsLetter(c))
-        {
-            return true;
-        }
-
-        // 全角符号
-        if (c >= 0xFF00 && c <= 0xFFEF)
-        {
-            return true;
-        }
-
-        return false;
+        // 下划线、日文点、字母和汉字、全角符号、中文和日文符号
+        return c == '_' || c == '・'
+            || char.IsLetter(c)
+            || (c >= 0xFF00 && c <= 0xFFEF)
+            || (c >= 0x3000 && c <= 0x303F)
+            || (c >= 0x3300 && c <= 0x33FF)
+            || (c >= 0x3040 && c <= 0x309F)
+            || (c >= 0x30A0 && c <= 0x30FF);
     }
 
 }
