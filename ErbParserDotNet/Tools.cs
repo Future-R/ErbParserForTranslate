@@ -182,6 +182,7 @@ public static class Tools
     /// <param name="gameContent"></param>
     /// <param name="jsonArray"></param>
     /// <returns></returns>
+    [Obsolete("这个方法已经被弃用，虽然速度很快，但我总是排查不干净Bug。请改用RegexReplace代替。")]
     public static string ACReplace(string gameContent, JArray jsonArray)
     {
         // 译文按original的长度从长到短排序，以此优先替换长文本，再替换短文本，大概率避免错序替换
