@@ -444,7 +444,7 @@ public static class Start
         string 合并后的字符串 = "[" + pt输入.ToString().TrimEnd(',') + "]";
         JArray 修正字典 = JArray.Parse(合并后的字符串);
         Timer.Stop();
-        Console.WriteLine("字典翻译导入完成！");
+        Console.WriteLine("字典翻译导入完成！正在全局替换，请稍候……");
 
         Timer.Start();
         foreach (var 文件名 in 文件名List)

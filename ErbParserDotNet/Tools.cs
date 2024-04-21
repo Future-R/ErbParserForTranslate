@@ -211,7 +211,7 @@ public static class Tools
     {
         Dictionary<string, string> replacements = new Dictionary<string, string>();
         var dictObjs = jsonArray.ToObject<List<JObject>>()
-            .Where(obj => (int)obj["stage"].ToObject(typeof(int)) > 0)
+            .Where(obj => obj.ContainsKey("stage") && (int)obj["stage"].ToObject(typeof(int)) > 0)
             .OrderByDescending(obj => obj["original"].ToString().Length);
         foreach (var dictObj in dictObjs)
         {

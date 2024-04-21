@@ -106,6 +106,14 @@ public class ERBParser
                     int spIndex = lineString.IndexOf(" ");
                     // 筛掉可能的SAVEDATA
                     string rightValue = lineString.Substring(spIndex).Trim();
+                    if (rightValue.StartsWith("GLOBAL "))
+                    {
+                        rightValue = rightValue.Substring(7);
+                    }
+                    else if (rightValue.StartsWith("GLOBALS "))
+                    {
+                        rightValue = rightValue.Substring(8);
+                    }
                     if (rightValue.StartsWith("REF "))
                     {
                         rightValue = rightValue.Substring(4);
