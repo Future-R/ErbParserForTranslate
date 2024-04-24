@@ -34,6 +34,11 @@ public static class Tools
     public static Regex dimFunction;
 
     /// <summary>
+    /// 捕获RESULTS的右值，由于行内无法判断右值是否为字符串类型，只能通过此下策多少捞回一点
+    /// </summary>
+    public static Regex resultsCatch;
+
+    /// <summary>
     /// 全局变量，似乎暂时用不到
     /// </summary>
     private static readonly string[] OriginVarName = new[]
@@ -73,6 +78,8 @@ public static class Tools
         lastNum = new Regex(@"(\d+)(?=\D*$)", RegexOptions.Compiled);
 
         dimFunction = new Regex(@"(\w+)\((.*?)\)", RegexOptions.Compiled);
+
+        resultsCatch = new Regex(@"(?<=RESULTS:?.* = ).+", RegexOptions.Compiled);
     }
 
     /// <summary>
@@ -116,6 +123,31 @@ public static class Tools
     public static string GetrelativePath(string filePath, string rootPath)
     {
         return filePath.Substring(rootPath.Length + 1);
+    }
+
+    public static IEnumerable<string> GetCSVValue(string line, bool banNumber = true)
+    {
+        // 先修剪行末注释
+        var indexA = line.IndexOf(';');
+        if (indexA == 0) return null;
+        var contentWithoutComment = indexA != -1 ? line.Substring(0, indexA) : line;
+        // 修剪括号注释
+        var indexB = contentWithoutComment.IndexOf('(');
+        contentWithoutComment = indexB != -1 ? contentWithoutComment.Substring(0, indexB) : contentWithoutComment;
+
+        // 分割一行的内容
+        var parts = contentWithoutComment.Split(',');
+
+        // 提取除了第一列以外的内容
+        IEnumerable<string> result = parts.Skip(1)
+            // 筛除空成员
+            .Where(text => !string.IsNullOrWhiteSpace(text));
+        if (banNumber)
+        {
+            // 筛选纯数字
+            result = result.Where(text => !int.TryParse(text.Trim(), out _));
+        }
+        return result;
     }
 
 

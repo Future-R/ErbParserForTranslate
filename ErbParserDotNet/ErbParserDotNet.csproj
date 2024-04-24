@@ -55,6 +55,7 @@
     <Compile Include="Start.cs" />
     <Compile Include="Timer.cs" />
     <Compile Include="Tools.cs" />
+    <Compile Include="Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

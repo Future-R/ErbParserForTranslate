@@ -36,7 +36,7 @@ public class ERBParser
 
         foreach (string line in lineList)
         {
-            string lineString = line.TrimStart();
+            string lineString = line.Trim();
             // 匹配注释，注释可能在行尾
             // 注释的优先级居然比print低
             int cmtIndex = lineString.IndexOf(';');
@@ -298,6 +298,17 @@ public class ERBParser
                 varNameList.AddRange(vari);
                 textList.AddRange(text);
             }
+            // SPLIT "日/月/火/水/木/金/土", "/", LOCALS
+            // 虽然这里可以把前面的字符串拆开，但最好还是给译者保留一点自由
+            else if (lineString.StartsWith("SPLIT "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                int cmIndex = rightValue.LastIndexOf(",");
+
+                textList.Add(rightValue.Substring(0, cmIndex).TrimStart());
+                varNameList.Add(rightValue.Substring(cmIndex + 1).TrimStart());
+            }
             // 乘算 TIMES int, float，参数1提出来，把参数2整个弃掉
             else if (lineString.StartsWith("TIMES "))
             {
@@ -317,12 +328,23 @@ public class ERBParser
             // 包含型匹配
             else
             {
+                // 先匹配正则
+                // 捕获results右值，一定是字符串
+                Match match = Tools.resultsCatch.Match(lineString);
+                if (match.Success)
+                {
+                    textList.Add(match.Value);
+                    Console.WriteLine($"捕获了{match.Value}");
+                    return;
+                }
+
                 // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
                 if (lineString.Contains(" = "))
                 {
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari);
                     textList.AddRange(text);
+                    return;
                 }
                 // 匹配字符串'=赋值，左值一定是字符串变量，右值一定是字符串。左值拿去判别式解析试试
                 if (lineString.Contains(" '= "))
@@ -334,6 +356,7 @@ public class ERBParser
                     varNameList.AddRange(vari);
                     textList.AddRange(text);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                    return;
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
                 if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/=") || lineString.Contains("&=") || lineString.Contains("|="))
@@ -341,6 +364,7 @@ public class ERBParser
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari);
                     textList.AddRange(text);
+                    return;
                 }
             }
         }

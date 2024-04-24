@@ -16,21 +16,8 @@ public class CSVParser
         var lines = File.ReadAllLines(filePath, Configs.fileEncoding);
         foreach (var line in lines)
         {
-            // 修剪行末注释，刚刚知道原来括号也是注释
-            var indexA = line.IndexOf(';');
-            if (indexA == 0) continue;
-            var contentWithoutComment = indexA != -1 ? line.Substring(0, indexA) : line;
-            var indexB = contentWithoutComment.IndexOf('(');
-            contentWithoutComment = indexB != -1 ? contentWithoutComment.Substring(0, indexB) : contentWithoutComment;
-
-            // 分割每一行的内容
-            var parts = contentWithoutComment.Split(',');
-
-            // 提取除了第一列以外的内容
-            valueList.AddRange(parts
-                .Skip(1)
-                // 筛除空成员和纯数字成员
-                .Where(text => !string.IsNullOrEmpty(text) && !int.TryParse(text, out _)));
+            IEnumerable<string> values = Tools.GetCSVValue(line);
+            if (values != null && values.Any()) valueList.AddRange(values);
         }
     }
 
