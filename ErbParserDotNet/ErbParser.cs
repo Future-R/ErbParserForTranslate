@@ -334,18 +334,9 @@ public class ERBParser
                 if (match.Success)
                 {
                     textList.Add(match.Value);
-                    Console.WriteLine($"捕获了{match.Value}");
-                    return;
+                    continue;
                 }
 
-                // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
-                if (lineString.Contains(" = "))
-                {
-                    var (vari, text) = ExpressionParser.Slash(lineString);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
-                    return;
-                }
                 // 匹配字符串'=赋值，左值一定是字符串变量，右值一定是字符串。左值拿去判别式解析试试
                 if (lineString.Contains(" '= "))
                 {
@@ -356,7 +347,7 @@ public class ERBParser
                     varNameList.AddRange(vari);
                     textList.AddRange(text);
                     if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
-                    return;
+                    continue;
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
                 if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/=") || lineString.Contains("&=") || lineString.Contains("|="))
@@ -364,7 +355,15 @@ public class ERBParser
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari);
                     textList.AddRange(text);
-                    return;
+                    continue;
+                }
+                // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
+                if (lineString.Contains("=") && !lineString.Contains("=="))
+                {
+                    var (vari, text) = ExpressionParser.Slash(lineString);
+                    varNameList.AddRange(vari);
+                    textList.AddRange(text);
+                    continue;
                 }
             }
         }
