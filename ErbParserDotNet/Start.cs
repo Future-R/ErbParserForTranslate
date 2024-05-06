@@ -35,8 +35,9 @@ public static class Start
 [5] - 将MTool机翻导入PT字典
 [6] - 查重，填充未翻译，警告不一致翻译
 [7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
-[8] - 设置
-[9] - 访问项目主页";
+[8] - Era传统字典转PT字典
+[9] - 设置
+[10] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -65,9 +66,12 @@ public static class Start
                     暴力修正();
                     break;
                 case "8":
-                    Settings();
+                    EraDictParser.解析Era字典();
                     break;
                 case "9":
+                    Settings();
+                    break;
+                case "10":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
