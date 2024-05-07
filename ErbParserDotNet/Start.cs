@@ -27,16 +27,16 @@ public static class Start
             // 主菜单
             string menuString =
 @"请输入序号并回车（默认为0）：
-[0] - 用字典汉化游戏
-[1] - 从游戏中提取PT字典（初次提取）
-[2] - 补充新版本条目到字典（本体更新时提取）
-[3] - 从已汉化本体中提取字典（本体和汉化版版本相同才能使用）
-[4] - 将PT字典转换成MTool字典
-[5] - 将MTool机翻导入PT字典
-[6] - 查重，填充未翻译，警告不一致翻译
-[7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
-[8] - Era传统字典转PT字典
-[9] - 设置
+[ 0] - 用字典汉化游戏
+[ 1] - 从游戏中提取PT字典（初次提取）
+[ 2] - 补充新版本条目到字典（本体更新时提取）
+[ 3] - 从已汉化本体中提取字典（本体和汉化版版本相同才能使用）
+[ 4] - 将PT字典转换成MTool字典
+[ 5] - 将MTool机翻导入PT字典
+[ 6] - 查重，填充未翻译，警告不一致翻译
+[ 7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
+[ 8] - Era传统字典转PT字典
+[ 9] - 设置
 [10] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
@@ -66,7 +66,7 @@ public static class Start
                     暴力修正();
                     break;
                 case "8":
-                    EraDictParser.解析Era字典();
+                    EraDictParser.二级菜单();
                     break;
                 case "9":
                     Settings();
@@ -332,7 +332,7 @@ public static class Start
         string gameDirectory = Tools.ReadLine("请拖入游戏根目录：（做好备份）");
         string[] files = Directory.GetFiles(gameDirectory, "*.*", SearchOption.AllDirectories);
 
-        // 筛选出指定类型的文件
+        // 筛选出指定类型的文件，为了安全只修正ERB和ERH，不修正CSV。如果想依靠ERB/ERH填充CSV，请依靠查重功能
         List<string> 文件名List = new List<string>();
         foreach (string file in files)
         {
