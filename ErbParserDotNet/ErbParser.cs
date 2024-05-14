@@ -250,6 +250,37 @@ public class ERBParser
                     }
                 }
             }
+            else if (lineString.StartsWith("BAR ") || lineString.StartsWith("BARL "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                var enumer = rightValue.Split(',')
+                        .Where(arg => !string.IsNullOrWhiteSpace(arg))
+                        .Select(arg => arg.Trim());
+                if (enumer.Count() == 3)
+                {
+                    varNameList.AddRange(enumer);
+                }
+                else
+                {
+                    Console.WriteLine($"【警告】{rightValue}不是可解析的BAR");
+                }
+            }
+            else if (lineString.StartsWith("GETNUM "))
+            {
+                int spIndex = lineString.IndexOf(" ");
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                string[] param = rightValue.Split(',');
+                if (param.Length == 2)
+                {
+                    varNameList.Add(param[0].Trim());
+                    textList.Add(param[1].Trim());
+                }
+                else
+                {
+                    Console.WriteLine($"【警告】{rightValue}不是可解析的GETNUM");
+                }
+            }
             // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢，不管了，拿去表达式解析
             else if (lineString.StartsWith("PRINTV") || lineString.StartsWith("PRINTS"))
             {
