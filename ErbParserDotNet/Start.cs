@@ -140,9 +140,12 @@ public static class Start
             {
                 string 原文 = jobj["original"].ToString();
                 // 大于0表示已翻译
-                if (jobj.ContainsKey("stage") && (int)jobj["stage"].ToObject(typeof(int)) > 0 && 完整导出)
+                if (jobj.ContainsKey("stage") && (int)jobj["stage"].ToObject(typeof(int)) > 0)
                 {
-                    输出obj[原文] = jobj["translation"].ToString();
+                    if (完整导出)
+                    {
+                        输出obj[原文] = jobj["translation"].ToString();
+                    }
                 }
                 else
                 {
@@ -308,6 +311,14 @@ public static class Start
                 {
                     Console.WriteLine($"【翻译】{已翻译字典[原文]}");
                     jobj["translation"] = 已翻译字典[原文];
+                    jobj["stage"] = 1;
+                    需要输出 = true;
+                }
+                // 引号括起的也要拿去和不括起的比较
+                else if ((!jobj.ContainsKey("stage") || jobj["stage"].ToString() == "0") && 已翻译字典.ContainsKey($"{原文.Trim('"')}"))
+                {
+                    Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('"')]}");
+                    jobj["translation"] = $"\"{已翻译字典[原文.Trim('"')]}\"";
                     jobj["stage"] = 1;
                     需要输出 = true;
                 }
