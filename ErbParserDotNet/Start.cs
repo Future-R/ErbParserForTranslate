@@ -279,6 +279,8 @@ public static class Start
             // 将每个JObject添加到列表中
             foreach (JObject jobj in jsonArray.ToObject<List<JObject>>())
             {
+                // 有疑问的词条也应该被批量翻译吗，只要也标注为有疑问就好？
+                //if (jobj.ContainsKey("stage") && (int)jobj["stage"].ToObject(typeof(int)) > 0)
                 if (jobj.ContainsKey("stage") && jobj["stage"].ToString() == "1")
                 {
                     string 原文 = jobj["original"].ToString();

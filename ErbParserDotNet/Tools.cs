@@ -278,4 +278,20 @@ public static class Tools
             }
         });
     }
+
+    /// <summary>
+    /// 寻找第一个空格，如果找不到，就找第一个全角空格
+    /// <br>坑爹语言，居然能把全角空格当空格用</br>
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public static int GetSpaceIndex(string context)
+    {
+        int value = context.IndexOf(' ');
+        if (value == -1)
+        {
+            value = context.IndexOf('　');
+        }
+        return value;
+    }
 }

@@ -85,9 +85,9 @@ public class ERBParser
                 }
             }
             // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
-            else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL"))
+            else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("JUMP "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
                 varNameList.AddRange(vari);
@@ -103,7 +103,7 @@ public class ERBParser
                 // 第一个元素是变量名，丢给变量名列表；第二个元素是参数，丢给文本列表
                 if (eqIndex == -1)
                 {
-                    int spIndex = lineString.IndexOf(" ");
+                    int spIndex = Tools.GetSpaceIndex(lineString);
                     // 筛掉可能的SAVEDATA
                     string rightValue = lineString.Substring(spIndex).Trim();
                     if (rightValue.StartsWith("GLOBAL "))
@@ -213,7 +213,7 @@ public class ERBParser
             // 匹配判别式……解析右值
             else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF ") || lineString.StartsWith("CASE "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
                 varNameList.AddRange(vari);
@@ -222,7 +222,7 @@ public class ERBParser
             // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值，不管了，统统扔去解析
             else if (lineString.StartsWith("RETURN"))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 if (spIndex != -1)
                 {
                     string rightValue = lineString.Substring(spIndex).Trim();
@@ -235,7 +235,7 @@ public class ERBParser
             // 空格取右值，右值以逗号分隔，参数1一定是字符串，参数2可能是纯数
             else if (lineString.StartsWith("PRINTBUTTON"))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
                 int cmIndex = rightValue.IndexOf(",");
                 if (cmIndex != -1 && cmIndex + 1 < rightValue.Length)
@@ -252,7 +252,7 @@ public class ERBParser
             }
             else if (lineString.StartsWith("BAR ") || lineString.StartsWith("BARL "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 var enumer = rightValue.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
@@ -268,7 +268,7 @@ public class ERBParser
             }
             else if (lineString.StartsWith("GETNUM "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 string[] param = rightValue.Split(',');
                 if (param.Length == 2)
@@ -284,7 +284,7 @@ public class ERBParser
             // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢，不管了，拿去表达式解析
             else if (lineString.StartsWith("PRINTV") || lineString.StartsWith("PRINTS"))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
                 varNameList.AddRange(vari);
@@ -293,7 +293,7 @@ public class ERBParser
             // HTML_PRINT，右值是FORM表达式，如果有英文引号，判断为文本，否则就是变量
             else if (lineString.StartsWith("HTML_PRINT "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 if (rightValue.Contains('"'))
                 {
@@ -312,7 +312,7 @@ public class ERBParser
             // 其它PRINT系，右值丢给译者
             else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATAFORM") || lineString.StartsWith("REUSELASTLINE"))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 if (spIndex == -1)
                 {
                     continue;
@@ -323,7 +323,7 @@ public class ERBParser
             // 改变颜色，右值一般是变量或者R,G,B，直接扔去做表达式解析
             else if (lineString.StartsWith("SETCOLOR "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
                 varNameList.AddRange(vari);
@@ -333,7 +333,7 @@ public class ERBParser
             // 虽然这里可以把前面的字符串拆开，但最好还是给译者保留一点自由
             else if (lineString.StartsWith("SPLIT "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 int cmIndex = rightValue.LastIndexOf(",");
 
@@ -343,11 +343,17 @@ public class ERBParser
             // 乘算 TIMES int, float，参数1提出来，把参数2整个弃掉
             else if (lineString.StartsWith("TIMES "))
             {
-                int spIndex = lineString.IndexOf(" ");
+                int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 int cmIndex = rightValue.IndexOf(",");
                 string varName = rightValue.Substring(0, cmIndex).Trim();
                 varNameList.Add(varName);
+            }
+            else if (lineString.StartsWith("PUTFORM "))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                textList.Add(rightValue);
             }
             // 末尾匹配
             // 变量自增自减少
