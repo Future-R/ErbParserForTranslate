@@ -18,6 +18,12 @@ class ExpressionParser
         List<string> variables = new List<string>();
         List<string> constants = new List<string>();
 
+        // 这是为了解决 PRINTV 'LV,ABL:欲望,'(,ABL:欲望 * 1,')
+        if (expression.Contains("'(,") && expression.Contains(",')"))
+        {
+            expression = expression.Replace("'(,", "").Replace(",')", "").TrimStart('\'');
+        }
+
         string temp = "";
         char lastChar = ' ';
         // 暂时只考虑匹配字符串边界，而不考虑匹配花括号和百分号括起的内容

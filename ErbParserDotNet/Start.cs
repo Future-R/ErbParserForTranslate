@@ -75,7 +75,7 @@ public static class Start
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
-                    Test.检查CharaID变动();
+                    Test.Debug();
                     break;
                 default:
                     Translator();

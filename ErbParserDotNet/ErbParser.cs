@@ -281,7 +281,7 @@ public class ERBParser
                     Console.WriteLine($"【警告】{rightValue}不是可解析的GETNUM");
                 }
             }
-            // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢，不管了，拿去表达式解析
+            // 打印变量，右值一定是变量，但是'(,5,')这种怎么处理呢，如果是"'("开头，跳过
             else if (lineString.StartsWith("PRINTV") || lineString.StartsWith("PRINTS"))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);

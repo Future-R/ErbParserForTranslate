@@ -147,7 +147,7 @@ public static class Tools
             // 筛选纯数字
             result = result.Where(text => !int.TryParse(text.Trim(), out _));
         }
-        return result;
+        return result.Select(s => s.TrimStart());
     }
 
 
