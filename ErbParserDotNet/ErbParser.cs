@@ -84,6 +84,12 @@ public class ERBParser
                     }
                 }
             }
+            else if (lineString.StartsWith("#DEFINE"))
+            {
+                var parts = lineString.Split(new[] { ' ', '\t' })
+                    .Where(str => !String.IsNullOrWhiteSpace(str) && !int.TryParse(str, out _));
+                varNameList.AddRange(parts.Skip(1));
+            }
             // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
             else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("JUMP "))
             {
