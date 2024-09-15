@@ -11,8 +11,34 @@ public class ERBParser
 {
     // 想了想，反正单纯只是提取文本，不需要Execute，所以只需要逐行提取，不需要保存结构
     List<string> lineList = new List<string>();
-    List<string> varNameList = new List<string>();
-    List<string> textList = new List<string>();
+
+    StringList varNameList = new StringList();
+    StringList textList = new StringList();
+
+    List<string> contexts = new List<string>();
+
+    public class StringList
+    {
+        public List<(string key, string context)> lines = new List<(string, string)>();
+
+        public void Add(string str, List<string> cxt)
+        {
+            lines.Add((str, string.Join("\n", cxt)));
+        }
+
+        public void AddRange(IEnumerable<string> strs, List<string> cxt)
+        {
+            foreach (var str in strs)
+            {
+                lines.Add((str, string.Join("\n", cxt)));
+            }
+        }
+
+        public List<string> GetKeys()
+        {
+            return lines.Select(x => x.Item1).ToList();
+        }
+    }
 
     public void ParseFile(string filePath)
     {
@@ -34,8 +60,9 @@ public class ERBParser
             return;
         }
 
-        foreach (string line in lineList)
+        for (int i = 0; i < lineList.Count; i++)
         {
+            string line = lineList[i];
             string lineString = line.Trim();
             // 匹配注释，注释可能在行尾
             // 注释的优先级居然比print低
@@ -56,6 +83,19 @@ public class ERBParser
                     }
                     break;
             }
+
+            // 写入上下文
+            contexts.Clear();
+            if (i > 0)
+            {
+                contexts.Add(lineList[i - 1]);
+            }
+            contexts.Add(lineList[i]);
+            if (i < lineList.Count - 1)
+            {
+                contexts.Add(lineList[i + 1]);
+            }
+
             // 匹配函数
             // 只匹配了声明用的@
             if (lineString.StartsWith("@"))
@@ -72,14 +112,14 @@ public class ERBParser
                         .Select(arg => arg.Trim());
                     // enumer.FirstOrDefault()是函数名，也可能需要翻译，但需要去除前面的@
                     // 其它成员是参数名
-                    varNameList.Add(enumer.FirstOrDefault().TrimStart('@'));
+                    varNameList.Add(enumer.FirstOrDefault().TrimStart('@'), contexts);
                     foreach (var token in enumer.Skip(1))
                     {
                         string[] parts = token.Split('=');
-                        varNameList.Add(parts[0].Trim());
+                        varNameList.Add(parts[0].Trim(), contexts);
                         if (parts.Length > 1 && !int.TryParse(parts[1].Trim(), out _))
                         {
-                            textList.Add(parts[1].Trim());
+                            textList.Add(parts[1].Trim(), contexts);
                         }
                     }
                 }
@@ -88,7 +128,7 @@ public class ERBParser
             {
                 var parts = lineString.Split(new[] { ' ', '\t' })
                     .Where(str => !String.IsNullOrWhiteSpace(str) && !int.TryParse(str, out _));
-                varNameList.AddRange(parts.Skip(1));
+                varNameList.AddRange(parts.Skip(1), contexts);
             }
             // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
             else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("JUMP "))
@@ -96,8 +136,8 @@ public class ERBParser
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                varNameList.AddRange(vari, contexts);
+                textList.AddRange(text, contexts);
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
             else if (lineString.StartsWith("#DIM"))
@@ -142,12 +182,12 @@ public class ERBParser
                     {
                         string commaLeft = rightValue.Substring(0, cmIndex).Trim();
                         string commaRight = rightValue.Substring(cmIndex + 1).Trim();
-                        varNameList.Add(commaLeft);
-                        textList.Add(commaRight);
+                        varNameList.Add(commaLeft, contexts);
+                        textList.Add(commaRight, contexts);
                     }
                     else
                     {
-                        varNameList.Add(rightValue);
+                        varNameList.Add(rightValue, contexts);
                     }
                 }
                 // 有等号的话，还要额外获取右值。右值可能是数字、字符串，可能会用逗号分隔。
@@ -159,7 +199,7 @@ public class ERBParser
 
                     var leftEnumer = leftValue.Split(' ')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg));
-                    varNameList.Add(leftEnumer.LastOrDefault());
+                    varNameList.Add(leftEnumer.LastOrDefault(), contexts);
 
                     // 类型推导，如果是数值型，那么右值不用翻译，continue掉
                     bool isIntegerValue = leftEnumer.FirstOrDefault() == "#DIM";
@@ -170,7 +210,7 @@ public class ERBParser
                         var rightEnumer = rightValue.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim().Trim('\"'));
-                        textList.AddRange(rightEnumer);
+                        textList.AddRange(rightEnumer, contexts);
                     }
                 }
             }
@@ -181,7 +221,7 @@ public class ERBParser
                 var rightEnumer = rightValue.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                varNameList.AddRange(rightEnumer);
+                varNameList.AddRange(rightEnumer, contexts);
             }
             // SETVAR	string, any
             else if (lineString.StartsWith("SETVAR"))
@@ -192,11 +232,11 @@ public class ERBParser
                 {
                     string commaLeft = rightValue.Substring(0, cmIndex).Trim();
                     string commaRight = rightValue.Substring(cmIndex + 1).Trim();
-                    varNameList.Add(commaLeft.TrimStart('@').Trim());
+                    varNameList.Add(commaLeft.TrimStart('@').Trim(), contexts);
                     // 参数2扔去解析
                     var (vari, text) = ExpressionParser.Slash(commaRight);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
                 }
             }
             // FOR循环 int,int,int，逗号分隔后全部送去变量名
@@ -206,15 +246,15 @@ public class ERBParser
                 var enumer = rightValue.Split(',')
                         .Where(arg => !string.IsNullOrWhiteSpace(arg))
                         .Select(arg => arg.Trim());
-                varNameList.AddRange(enumer);
+                varNameList.AddRange(enumer, contexts);
             }
             // Switch-Case的Switch，右值拿去判别式解析
             else if (lineString.StartsWith("SELECTCASE "))
             {
                 var rightValue = lineString.Substring(10).Trim();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                varNameList.AddRange(vari, contexts);
+                textList.AddRange(text, contexts);
             }
             // 匹配判别式……解析右值
             else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF ") || lineString.StartsWith("CASE "))
@@ -222,8 +262,8 @@ public class ERBParser
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                varNameList.AddRange(vari, contexts);
+                textList.AddRange(text, contexts);
             }
             // 匹配返回，RETURN的右值一定是变量名，RETURNFORM和RETURNF将返回一个FORM解析的右值，不管了，统统扔去解析
             else if (lineString.StartsWith("RETURN"))
@@ -233,8 +273,8 @@ public class ERBParser
                 {
                     string rightValue = lineString.Substring(spIndex).Trim();
                     var (vari, text) = ExpressionParser.Slash(rightValue);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
                 }
             }
             // 匹配打印按钮，可能是PRINTBUTTON、PRINTBUTTONC、PRINTBUTTONLC
@@ -248,11 +288,11 @@ public class ERBParser
                 {
                     string commaLeft = rightValue.Substring(0, cmIndex).Trim();
                     string commaRight = rightValue.Substring(cmIndex + 1).Trim();
-                    textList.Add(commaLeft);
+                    textList.Add(commaLeft, contexts);
                     // 参数2如果是纯数就不翻译了
                     if (!int.TryParse(commaRight, out _))
                     {
-                        textList.Add(commaRight);
+                        textList.Add(commaRight, contexts);
                     }
                 }
             }
@@ -265,7 +305,7 @@ public class ERBParser
                         .Select(arg => arg.Trim());
                 if (enumer.Count() == 3)
                 {
-                    varNameList.AddRange(enumer);
+                    varNameList.AddRange(enumer, contexts);
                 }
                 else
                 {
@@ -279,8 +319,8 @@ public class ERBParser
                 string[] param = rightValue.Split(',');
                 if (param.Length == 2)
                 {
-                    varNameList.Add(param[0].Trim());
-                    textList.Add(param[1].Trim());
+                    varNameList.Add(param[0].Trim(), contexts);
+                    textList.Add(param[1].Trim(), contexts);
                 }
                 else
                 {
@@ -293,8 +333,8 @@ public class ERBParser
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                varNameList.AddRange(vari, contexts);
+                textList.AddRange(text, contexts);
             }
             // HTML_PRINT，右值是FORM表达式，如果有英文引号，判断为文本，否则就是变量
             else if (lineString.StartsWith("HTML_PRINT "))
@@ -303,11 +343,11 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 if (rightValue.Contains('"'))
                 {
-                    textList.Add(rightValue);
+                    textList.Add(rightValue, contexts);
                 }
                 else
                 {
-                    varNameList.Add(rightValue);
+                    varNameList.Add(rightValue, contexts);
                 }
             }
             // PRINT图像、矩形和空格，不需要翻译
@@ -324,7 +364,7 @@ public class ERBParser
                     continue;
                 }
                 string rightValue = lineString.Substring(spIndex).TrimStart();
-                textList.Add(rightValue);
+                textList.Add(rightValue, contexts);
             }
             // 改变颜色，右值一般是变量或者R,G,B，直接扔去做表达式解析
             else if (lineString.StartsWith("SETCOLOR "))
@@ -332,8 +372,8 @@ public class ERBParser
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari);
-                textList.AddRange(text);
+                varNameList.AddRange(vari, contexts);
+                textList.AddRange(text, contexts);
             }
             // SPLIT "日/月/火/水/木/金/土", "/", LOCALS
             // 虽然这里可以把前面的字符串拆开，但最好还是给译者保留一点自由
@@ -343,8 +383,8 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 int cmIndex = rightValue.LastIndexOf(",");
 
-                textList.Add(rightValue.Substring(0, cmIndex).TrimStart());
-                varNameList.Add(rightValue.Substring(cmIndex + 1).TrimStart());
+                textList.Add(rightValue.Substring(0, cmIndex).TrimStart(), contexts);
+                varNameList.Add(rightValue.Substring(cmIndex + 1).TrimStart(), contexts);
             }
             // 乘算 TIMES int, float，参数1提出来，把参数2整个弃掉
             else if (lineString.StartsWith("TIMES "))
@@ -353,20 +393,20 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 int cmIndex = rightValue.IndexOf(",");
                 string varName = rightValue.Substring(0, cmIndex).Trim();
-                varNameList.Add(varName);
+                varNameList.Add(varName, contexts);
             }
             else if (lineString.StartsWith("PUTFORM "))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart();
-                textList.Add(rightValue);
+                textList.Add(rightValue, contexts);
             }
             // 末尾匹配
             // 变量自增自减少
             else if (lineString.EndsWith("++") || lineString.EndsWith("--"))
             {
                 string varName = lineString.Substring(0, lineString.Length - 2).Trim();
-                varNameList.Add(varName);
+                varNameList.Add(varName, contexts);
             }
             // 包含型匹配
             else
@@ -376,7 +416,7 @@ public class ERBParser
                 Match match = Tools.resultsCatch.Match(lineString);
                 if (match.Success)
                 {
-                    textList.Add(match.Value);
+                    textList.Add(match.Value, contexts);
                     continue;
                 }
 
@@ -387,25 +427,43 @@ public class ERBParser
                     string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
                     var (vari, text) = ExpressionParser.Slash(leftValue);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
-                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
+                    if (!int.TryParse(rightValue, out _)) textList.Add(rightValue, contexts);
                     continue;
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
                 if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/=") || lineString.Contains("&=") || lineString.Contains("|="))
                 {
                     var (vari, text) = ExpressionParser.Slash(lineString);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
                     continue;
                 }
-                // 匹配赋值，左值一定是变量，整行拿去判别式解析试试
+                // 匹配赋值，左值一定是变量，直接添加；
+                // 右值如果没有"{:%这4个符号，则应该是字符串，否则拿去解析；
                 if (lineString.Contains("=") && !lineString.Contains("=="))
                 {
-                    var (vari, text) = ExpressionParser.Slash(lineString);
-                    varNameList.AddRange(vari);
-                    textList.AddRange(text);
+                    int eqIndex = lineString.IndexOf("=");
+                    string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
+                    string rightValue = lineString.Substring(eqIndex + 1).Trim();
+
+                    var (vari1, text1) = ExpressionParser.Slash(leftValue);
+                    varNameList.AddRange(vari1, contexts);
+                    textList.AddRange(text1, contexts);
+
+                    if (rightValue.Contains("\"") || rightValue.Contains("{") || rightValue.Contains(":") || rightValue.Contains("%") ||
+                        rightValue.Contains("LOCAL") || rightValue.Contains("RESULT"))
+                    {
+                        var (vari2, text2) = ExpressionParser.Slash(rightValue);
+                        varNameList.AddRange(vari2, contexts);
+                        textList.AddRange(text2, contexts);
+                    }
+                    else
+                    {
+                        textList.Add(rightValue, contexts);
+                    }
+
                     continue;
                 }
             }
@@ -414,14 +472,30 @@ public class ERBParser
 
     // 合并重复成员，过滤变量和纯数字
     // 括号的特殊处理：没想好怎么处理，先按有括号就不拆的做法
+    public List<(string, string)> VarNameListFilter(List<(string, string)> originalList)
+    {
+        return originalList.Distinct()
+            .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
+            .ToList();
+    }
+
     public List<string> VarNameListFilter(List<string> originalList)
     {
         return originalList.Distinct()
             .Where(token => !string.IsNullOrWhiteSpace(token) && !Tools.IsArray(token))
             .ToList();
     }
+
     // 合并重复成员，过滤纯英文和纯数字
     // 是否需要剔除当前文件的变量名，待观察
+    public List<(string, string)> TextListFilter(List<(string, string)> originalList)
+    {
+        return originalList
+            .Distinct()
+            .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
+            .ToList();
+    }
+
     public List<string> TextListFilter(List<string> originalList)
     {
         return originalList
@@ -458,11 +532,11 @@ public class ERBParser
         }
     }
 
-    public void WriteJson(string targetFile, string relativePath, (List<string>, List<string>) referTuple)
+    public void WriteJson(string targetFile, string relativePath, (StringList, StringList) referTuple)
     {
         // 解包元组，得到参考用的两个列表
-        List<string> referVarNameList = referTuple.Item1;
-        List<string> referTextList = referTuple.Item2;
+        StringList referVarNameList = referTuple.Item1;
+        StringList referTextList = referTuple.Item2;
 
         var allObjs = new List<JObject>();
 
@@ -479,11 +553,11 @@ public class ERBParser
     // 键值是 类型 + 相对路径(去除后缀) + 四位数字ID
     // 类型有 变量 和 文本，将来替换的时候，如果变量没有翻译，会从其他已翻译的变量里找翻译
     // 将来还能做检查，如果有变量翻译的不一样，提前报warning
-    private void AddObjsForType(string type, List<string> originalList, List<JObject> objs, string relativePath)
+    private void AddObjsForType(string type, StringList originalList, List<JObject> objs, string relativePath)
     {
         if (type == "文本")
         {
-            var newObjs = TextListFilter(originalList).Select((item, index) =>
+            var newObjs = TextListFilter(originalList.lines).Select((item, index) =>
             {
                 return new JObject
                 {
@@ -491,15 +565,16 @@ public class ERBParser
                         .Append(Path.ChangeExtension(relativePath, ""))
                         .Append(index.ToString().PadLeft(5, '0'))
                         .ToString(),
-                    ["original"] = item,
-                    ["translation"] = ""
+                    ["original"] = item.Item1,
+                    ["translation"] = "",
+                    ["context"] = item.Item2
                 };
             });
             objs.AddRange(newObjs);
         }
         else
         {
-            var newObjs = VarNameListFilter(originalList).Select((item, index) =>
+            var newObjs = VarNameListFilter(originalList.lines).Select((item, index) =>
             {
                 return new JObject
                 {
@@ -507,28 +582,29 @@ public class ERBParser
                         .Append(Path.ChangeExtension(relativePath, ""))
                         .Append(index.ToString().PadLeft(5, '0'))
                         .ToString(),
-                    ["original"] = item,
-                    ["translation"] = ""
+                    ["original"] = item.Item1,
+                    ["translation"] = "",
+                    ["context"] = item.Item2
                 };
             });
             objs.AddRange(newObjs);
         }
     }
 
-    private void AddObjsForType(string type, List<string> originalList, List<JObject> objs, string relativePath, List<string> referenceList)
+    private void AddObjsForType(string type, StringList originalList, List<JObject> objs, string relativePath, StringList referenceList)
     {
         // 条数相等不一定匹配，但不相等肯定不匹配
-        if (originalList.Count == referenceList.Count)
+        if (originalList.lines.Count == referenceList.lines.Count)
         {
-            var originObjs = type == "文本" ? TextListFilter(originalList) : VarNameListFilter(originalList);
-            var referenceObjs = type == "文本" ? TextListFilter(referenceList) : VarNameListFilter(referenceList);
+            var originObjs = type == "文本" ? TextListFilter(originalList.lines) : VarNameListFilter(originalList.lines);
+            var referenceObjs = type == "文本" ? TextListFilter(referenceList.lines) : VarNameListFilter(referenceList.lines);
             // 二次检查
             if (originObjs.Count == referenceObjs.Count)
             {
                 for (int index = 0; index < originObjs.Count; index++)
                 {
                     // 如果对比发现，参考和原版不一致，那么把参考的值填进translation
-                    if (originObjs[index] != referenceObjs[index])
+                    if (originObjs[index].Item1 != referenceObjs[index].Item1)
                     {
                         objs.Add(new JObject
                         {
@@ -537,8 +613,9 @@ public class ERBParser
                             .Append(Path.ChangeExtension(relativePath, ""))
                             .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
-                            ["original"] = originObjs[index],
-                            ["translation"] = referenceObjs[index]
+                            ["original"] = originObjs[index].Item1,
+                            ["translation"] = referenceObjs[index].Item1,
+                            ["context"] = originObjs[index].Item2
                         });
                     }
                     else
@@ -549,8 +626,9 @@ public class ERBParser
                             .Append(Path.ChangeExtension(relativePath, ""))
                             .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
-                            ["original"] = originObjs[index],
-                            ["translation"] = ""
+                            ["original"] = originObjs[index].Item1,
+                            ["translation"] = "",
+                            ["context"] = originObjs[index].Item2
                         });
                     }
                 }
@@ -565,7 +643,7 @@ public class ERBParser
     /// 返回varNameList和textList
     /// </summary>
     /// <returns></returns>
-    public (List<string> name, List<string> text) GetListTuple()
+    public (StringList name, StringList text) GetListTuple()
     {
         return (name: varNameList, text: textList);
     }
@@ -573,12 +651,12 @@ public class ERBParser
     public void DebugPrint()
     {
         Console.WriteLine("======变量名======");
-        foreach (var item in VarNameListFilter(varNameList))
+        foreach (var item in VarNameListFilter(varNameList.lines))
         {
             Console.WriteLine(item);
         }
         Console.WriteLine("======纯文本======");
-        foreach (var item in TextListFilter(textList))
+        foreach (var item in TextListFilter(textList.lines))
         {
             Console.WriteLine(item);
         }
@@ -642,7 +720,7 @@ public class ERBParser
             if (!Tools.engArrayFilter.IsMatch(funcName))
             {
                 //Console.WriteLine("函数名: " + funcName);
-                varNameList.Add(funcName);
+                varNameList.Add(funcName, contexts);
             }
 
             string args = match.Groups[2].Value;
@@ -657,7 +735,7 @@ public class ERBParser
                 if (!Tools.engArrayFilter.IsMatch(argName))
                 {
                     //Console.WriteLine("参数名: " + argName);
-                    varNameList.Add(argName);
+                    varNameList.Add(argName, contexts);
                 }
 
 
@@ -671,13 +749,13 @@ public class ERBParser
                             if (argV.Length > 2)
                             {
                                 //Console.WriteLine("参数值: " + argParts[1].Trim());
-                                textList.Add(argV);
+                                textList.Add(argV, contexts);
                             }
                         }
                         else
                         {
                             //Console.WriteLine("参数名: " + argParts[1].Trim());
-                            varNameList.Add(argV);
+                            varNameList.Add(argV, contexts);
                         }
                     }
                 }

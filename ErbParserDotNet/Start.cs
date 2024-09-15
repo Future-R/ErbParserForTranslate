@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static ERBParser;
 
 public static class Start
 {
@@ -87,7 +88,7 @@ public static class Start
         }
     }
 
-    
+
 
     static void Settings()
     {
@@ -746,17 +747,22 @@ public static class Start
                     int index = maxKey + 1;
                     // 合并变量名和长文本
                     var tuple = parser.GetListTuple();
-                    List<string> varNameList = parser.VarNameListFilter(tuple.name);
-                    List<string> textList = parser.TextListFilter(tuple.text);
+                    List<(string, string)> varNameList = parser.VarNameListFilter(tuple.name.lines);
+                    List<(string, string)> textList = parser.TextListFilter(tuple.text.lines);
 
                     List<JObject> PTJsonObjList = new List<JObject>();
                     // 处理变量名
-                    foreach (string varName in varNameList)
+                    foreach ((string original, string context) in varNameList)
                     {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == varName);
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == original);
                         // 找到对应条目，就直接用参考覆盖
                         if (targetObject != null)
                         {
+                            // 版本过渡的临时处理
+                            if (!targetObject.ContainsKey("context"))
+                            {
+                                targetObject.Add("context", context);
+                            }
                             PTJsonObjList.Add(targetObject);
                         }
                         // 否则，新建一个index序号的新条目
@@ -768,21 +774,27 @@ public static class Start
                                 .Append(Path.ChangeExtension(relativePath, ""))
                                 .Append(index.ToString().PadLeft(5, '0'))
                                 .ToString(),
-                                ["original"] = varName,
-                                ["translation"] = ""
+                                ["original"] = original,
+                                ["translation"] = "",
+                                ["context"] = context
                             });
-                            Console.WriteLine($"[变量]{varName}");
+                            Console.WriteLine($"[变量]{original}");
                             // 仅在成功添加新条目时，才自增序号
                             index++;
                         }
                     }
                     // 处理长文本
-                    foreach (string text in textList)
+                    foreach ((string original, string context) in textList)
                     {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == original);
                         // 找到对应条目，就直接用参考覆盖
                         if (targetObject != null)
                         {
+                            // 版本过渡的临时处理
+                            if (!targetObject.ContainsKey("context"))
+                            {
+                                targetObject.Add("context", context);
+                            }
                             PTJsonObjList.Add(targetObject);
                         }
                         // 否则，新建一个index序号的新条目
@@ -794,10 +806,11 @@ public static class Start
                                 .Append(Path.ChangeExtension(relativePath, ""))
                                 .Append(index.ToString().PadLeft(5, '0'))
                                 .ToString(),
-                                ["original"] = text,
-                                ["translation"] = ""
+                                ["original"] = original,
+                                ["translation"] = "",
+                                ["context"] = context
                             });
-                            Console.WriteLine($"[文本]{text}");
+                            Console.WriteLine($"[文本]{original}");
                             // 仅在成功添加新条目时，才自增序号
                             index++;
                         }
