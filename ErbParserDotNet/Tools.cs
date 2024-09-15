@@ -150,6 +150,24 @@ public static class Tools
         return result.Select(s => s.TrimStart());
     }
 
+    public static string GetResValue(string line, bool banNumber = true)
+    {
+        // 先修剪行末注释
+        var indexA = line.IndexOf(';');
+        if (indexA == 0) return null;
+        var contentWithoutComment = indexA != -1 ? line.Substring(0, indexA) : line;
+        // 修剪括号注释
+        var indexB = contentWithoutComment.IndexOf('(');
+        contentWithoutComment = indexB != -1 ? contentWithoutComment.Substring(0, indexB) : contentWithoutComment;
+
+        // 分割一行的内容
+        var parts = contentWithoutComment.Split(',');
+
+        // 只提取第一列内容
+        string result = parts.FirstOrDefault().Trim();
+
+        return result;
+    }
 
     /// <summary>
     /// 以非常谨慎的方式进行替换，效率比较低，但是很安全

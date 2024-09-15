@@ -476,6 +476,7 @@ public static class Start
         // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
         Tools.CleanDirectory(Path.Combine(appPath, "CSV"));
         Tools.CleanDirectory(Path.Combine(appPath, "ERB"));
+        Tools.CleanDirectory(Path.Combine(appPath, "resources"));
 
         string mergePath = merge ? Tools.ReadLine("请拖入已经汉化的游戏根目录（作为翻译参考）：") : string.Empty;
 
@@ -483,6 +484,7 @@ public static class Start
 
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
+        string resDirectory = Path.Combine(path, "resources");
 
         Timer.Start();
 
@@ -590,6 +592,43 @@ public static class Start
         {
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
         }
+        if (Directory.Exists(resDirectory))
+        {
+            // 获取所有csv文件
+            var resNames = Directory.GetFiles(resDirectory, "*.csv", SearchOption.AllDirectories);
+            Parallel.ForEach(resNames, resName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(resName, path);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析CSV
+                RESParser parser = new RESParser();
+                parser.ParseFile(resName);
+
+                // 输出Json
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                if (merge)
+                {
+                    var referencePath = Path.Combine(mergePath, relativePath);
+                    if (File.Exists(referencePath))
+                    {
+                        RESParser referenceParser = new RESParser();
+                        referenceParser.ParseFile(referencePath);
+                        parser.WriteJson(targetFile, relativePath, referenceParser.GetList());
+                    }
+                    else
+                    {
+                        Console.WriteLine($"【警告】：未能找到{referencePath}！");
+                        parser.WriteJson(targetFile, relativePath);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
+        }
 
         Timer.Stop();
         Console.WriteLine("已将生成的JSON放置在此程序目录下");
@@ -611,6 +650,7 @@ public static class Start
         // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
         Tools.CleanDirectory(Path.Combine(appPath, "CSV"));
         Tools.CleanDirectory(Path.Combine(appPath, "ERB"));
+        Tools.CleanDirectory(Path.Combine(appPath, "resources"));
 
         string oldPath = Tools.ReadLine("请拖入放置CSV和ERB目录的译文目录：");
         string[] oldFileArray = Directory.GetFiles(oldPath, "*.json", SearchOption.AllDirectories);
@@ -631,6 +671,7 @@ public static class Start
         string newPath = Tools.ReadLine($"已导入{oldDict.Count}个文件。\n请拖入新版本游戏目录：");
         string csvDirectory = Path.Combine(newPath, "CSV");
         string erbDirectory = Path.Combine(newPath, "ERB");
+        string resDirectory = Path.Combine(newPath, "resources");
 
         Timer.Start();
 
@@ -831,6 +872,77 @@ public static class Start
         else
         {
             throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
+        }
+        if (Directory.Exists(resDirectory))
+        {
+            // 获取所有res文件
+            var resNames = Directory.GetFiles(resDirectory, "*.csv", SearchOption.AllDirectories);
+            Parallel.ForEach(resNames, resName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(resName, newPath);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析CSV
+                RESParser parser = new RESParser();
+                parser.ParseFile(resName);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                string fileKey = Path.ChangeExtension(relativePath, ".json");
+                // 如果译文字典里已经存在相应的文件，取作参考，否则正常输出
+                if (oldDict.ContainsKey(fileKey))
+                {
+                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
+
+                    int maxKey = int.MinValue;
+                    foreach (var jObject in referenceObjects)
+                    {
+                        string key = jObject["key"].ToString();
+                        // 获取键值最后的5位序号
+                        int num = int.Parse(Tools.lastNum.Match(key).Value);
+                        if (num > maxKey)
+                        {
+                            maxKey = num;
+                        }
+                    }
+                    // 得到起始序号
+                    int index = maxKey + 1;
+                    var resList = parser.GetList().Distinct();
+                    List<JObject> PTJsonObjList = new List<JObject>();
+                    foreach (string text in resList)
+                    {
+                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
+                        // 找到对应条目，就直接用参考覆盖
+                        if (targetObject != null)
+                        {
+                            PTJsonObjList.Add(targetObject);
+                        }
+                        // 否则，新建一个index序号的新条目
+                        else
+                        {
+                            PTJsonObjList.Add(new JObject
+                            {
+                                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
+                                ["original"] = text,
+                                ["translation"] = ""
+                            });
+                            Console.WriteLine($"[IMG]{text}");
+                            // 仅在成功添加新条目时，才自增序号
+                            index++;
+                        }
+                    }
+
+                    if (PTJsonObjList.Count() > 0)
+                    {
+                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
+                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
         }
 
         Timer.Stop();

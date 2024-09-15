@@ -256,8 +256,24 @@ public class ERBParser
                 varNameList.AddRange(vari, contexts);
                 textList.AddRange(text, contexts);
             }
+            // 匹配CASE
+            else if (lineString.StartsWith("CASE "))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).Trim();
+                if (rightValue.StartsWith("\""))
+                {
+                    textList.Add(rightValue, contexts);
+                }
+                else
+                {
+                    var (vari, text) = ExpressionParser.Slash(rightValue);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
+                }
+            }
             // 匹配判别式……解析右值
-            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF ") || lineString.StartsWith("CASE "))
+            else if (lineString.StartsWith("IF ") || lineString.StartsWith("SIF ") || lineString.StartsWith("ELSEIF "))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
@@ -445,15 +461,19 @@ public class ERBParser
                 if (lineString.Contains("=") && !lineString.Contains("=="))
                 {
                     int eqIndex = lineString.IndexOf("=");
-                    string leftValue = lineString.Substring(0, eqIndex - 1).Trim();
+                    string leftValue = lineString.Substring(0, eqIndex).Trim();
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
+
+                    bool rightIsString = leftValue.Contains("RESULTS") || leftValue.Contains("LOCALS") || leftValue.Contains("ARGS");
 
                     var (vari1, text1) = ExpressionParser.Slash(leftValue);
                     varNameList.AddRange(vari1, contexts);
                     textList.AddRange(text1, contexts);
 
-                    if (rightValue.Contains("\"") || rightValue.Contains("{") || rightValue.Contains(":") || rightValue.Contains("%") ||
-                        rightValue.Contains("LOCAL") || rightValue.Contains("RESULT"))
+                    if (!rightIsString ||
+                        rightValue.StartsWith("@") ||
+                        rightValue.Contains("\"") || rightValue.Contains("{") || rightValue.Contains(":") || rightValue.Contains("%") ||
+                        rightValue.Contains("LOCAL") || rightValue.Contains("RESULT") || rightValue.Contains("ARG"))
                     {
                         var (vari2, text2) = ExpressionParser.Slash(rightValue);
                         varNameList.AddRange(vari2, contexts);

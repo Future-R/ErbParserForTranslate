@@ -16,6 +16,9 @@ public static class Configs
 
     // 解析表达式需要的符号集合
     public static List<string> operators { get; private set; }
+
+    // 允许担当变量名的字符
+    public static List<string> var_operators { get; private set; }
     // 强力过滤变量名
     public static bool forceFilter = true;
     // 执行完毕后自动打开文件夹
@@ -37,6 +40,8 @@ public static class Configs
             fileEncoding = encoding.Contains("BOM") ? new UTF8Encoding(true) : Encoding.GetEncoding(encoding);
 
             operators = configs["需要处理的操作符"].ToObject<List<string>>();
+
+            var_operators = configs["允许构成变量名的字符"].ToObject<List<string>>();
 
             forceFilter = (bool)configs["强力过滤变量名"].ToObject(typeof(bool));
             autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));
