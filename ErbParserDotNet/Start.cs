@@ -35,10 +35,9 @@ public static class Start
 [ 4] - 将PT字典转换成MTool字典
 [ 5] - 将MTool机翻导入PT字典
 [ 6] - 查重，填充未翻译，警告不一致翻译
-[ 7] - 暴力修正（这是一个临时的解决方案，旨在解决项目早期变量名翻译不统一的问题）
-[ 8] - Era传统字典转PT字典
-[ 9] - 设置
-[10] - 访问项目主页";
+[ 7] - Era传统字典转PT字典
+[ 8] - 设置
+[ 9] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -63,16 +62,16 @@ public static class Start
                 case "6":
                     FillTranz();
                     break;
+                //case "7":
+                //    暴力修正();
+                //    break;
                 case "7":
-                    暴力修正();
-                    break;
-                case "8":
                     EraDictParser.二级菜单();
                     break;
-                case "9":
+                case "8":
                     Settings();
                     break;
-                case "10":
+                case "9":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -339,6 +338,61 @@ public static class Start
             Process.Start(directoryPath);
         }
     }
+    static void 自动修正(string 游戏目录, string 字典根目录)
+    {
+        Timer.Start();
+        string[] 游戏目录下所有文件 = Directory.GetFiles(游戏目录, "*.*", SearchOption.AllDirectories);
+
+        // 筛选出指定类型的文件，为了安全只修正ERB和ERH，不修正CSV。如果想依靠ERB/ERH填充CSV，请依靠查重功能
+        List<string> 待汉化文件 = new List<string>();
+        foreach (string 文件 in 游戏目录下所有文件)
+        {
+            if (文件.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
+                文件.EndsWith(".erh", StringComparison.OrdinalIgnoreCase))
+            {
+                待汉化文件.Add(文件);
+            }
+        }
+
+        List<string> 存在的修正字典 = new List<string>();
+        string CSV字典根目录 = Path.Combine(字典根目录, "CSV");
+        string[] CSV目录下的一级字典 = Directory.GetFiles(CSV字典根目录);
+
+        foreach (string 参考文件 in Configs.autoReplaceRefer)
+        {
+            // 检查文件是否存在于目录中
+            foreach (string 字典 in CSV目录下的一级字典)
+            {
+                if (Path.GetFileNameWithoutExtension(字典).Equals(参考文件, StringComparison.OrdinalIgnoreCase))
+                {
+                    存在的修正字典.Add(Path.Combine(CSV字典根目录, 参考文件));
+                    break;
+                }
+            }
+        }
+
+        StringBuilder pt输入 = new StringBuilder();
+        foreach (var 字典 in 存在的修正字典)
+        {
+            // AppendLine自带换行符，但还要去掉json数组头尾的方括号，尾巴还要补逗号
+            pt输入.AppendLine(File.ReadAllText(字典).TrimStart('[').TrimEnd(']'));
+            pt输入.Append(',');
+        }
+        // 合并后要去除尾逗号，再加回方括号
+        string 合并后的字符串 = "[" + pt输入.ToString().TrimEnd(',') + "]";
+        JArray 修正字典 = JArray.Parse(合并后的字符串);
+
+
+        foreach (var 文件名 in 待汉化文件)
+        {
+            string 待处理文本 = File.ReadAllText(文件名);
+            待处理文本 = Tools.RegexReplace(待处理文本, 修正字典);
+            File.WriteAllText(文件名, 待处理文本, Configs.fileEncoding);
+        }
+
+        Timer.Stop();
+        Console.WriteLine("自动修正完毕！");
+    }
 
     static void 暴力修正()
     {
@@ -401,6 +455,7 @@ public static class Start
             // 获取相对路径
             var relativePath = Tools.GetrelativePath(jsonFile, transFileDirectory);
             bool isCSV = relativePath.StartsWith("CSV");
+            bool isIMG = relativePath.StartsWith("resources");
             bool fileExist = false;
             // 得到输出路径
             var targetPath = Path.Combine(gameDirectory, relativePath);
@@ -421,7 +476,7 @@ public static class Start
             // 如果目标脚本不存在，跳过这一条并报错
             if (!fileExist)
             {
-                if (isCSV)
+                if (isCSV || isIMG)
                 {
                     Console.WriteLine($"【错误】：没找到{targetPath}.CSV！");
                 }
@@ -448,8 +503,17 @@ public static class Start
                     {
                         // 读取游戏脚本
                         string scriptContent = File.ReadAllText(item, Configs.fileEncoding);
-                        // 使用字典替换原文
-                        scriptContent = Tools.RegexReplace(scriptContent, jsonArray);
+                        if (!isIMG)
+                        {
+                            // 使用字典替换原文
+                            scriptContent = Tools.RegexReplace(scriptContent, jsonArray);
+                        }
+                        else
+                        {
+                            // 图像资源配置CSV采用特殊方式翻译
+                            scriptContent = Tools.TransResConfig(scriptContent, jsonArray);
+                        }
+
                         // 覆盖写入
                         File.WriteAllText(item, scriptContent, Configs.fileEncoding);
                     }
@@ -460,6 +524,16 @@ public static class Start
         Timer.Stop();
 
         Console.WriteLine("翻译已完成！");
+        if (Configs.autoReplace)
+        {
+            Console.WriteLine("检查到变量自动修正已启用，按任意键开始执行修正任务！");
+            Console.WriteLine("自动修正会参考部分CSV变量汉化，去修正ERB中未翻译的内插变量。");
+            Console.WriteLine("该功能在翻译前中期能有效抑制变量翻译带来的错误。");
+            Console.WriteLine("如果不想修正，也可以在这一步直接关闭程序并且调整设置。");
+            Console.ReadKey();
+
+            自动修正(gameDirectory, transFileDirectory);
+        }
         if (Configs.autoOpenFolder)
         {
             Process.Start(gameDirectory);

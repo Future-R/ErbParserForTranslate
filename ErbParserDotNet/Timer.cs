@@ -23,7 +23,7 @@ public static class Timer
         stopwatch.Stop();
         TimeSpan ts = stopwatch.Elapsed;
         string elapsedTime = String.Format("{0:00}秒{1:00}",
-            ts.Seconds,
+            ts.Minutes * 60 + ts.Seconds,
             ts.Milliseconds / 10);
         Console.WriteLine("耗时：" + elapsedTime);
     }

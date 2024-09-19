@@ -79,14 +79,14 @@ class ExpressionParser
                     //Console.WriteLine($"符号：{temp}");
                     temp = "";
                 }
-                // 为了方便，暂时不支持在变量名中使用数字了
+
                 else if (IsAllowChar(expression[i]) && (i == expression.Length - 1 || !IsAllowChar(expression[i + 1])))
                 {
                     // 捕获变量名
                     variables.Add(temp);
                     temp = "";
                 }
-                else if (Char.IsDigit(expression[i]) && !Configs.operators.Contains(temp) && (i == expression.Length - 1 || !Char.IsDigit(expression[i + 1])))
+                else if (Char.IsDigit(expression[i]) && !Configs.operators.Contains(temp) && (i == expression.Length - 1 || expression[i + 1] == ' ' || Configs.operators.Contains(expression[i + 1].ToString())))
                 {
                     // 捕获数字或字符串
                     constants.Add(temp);
@@ -110,9 +110,9 @@ class ExpressionParser
         {
             return true;
         }
-        // 下划线、日文点、字母和汉字、全角符号、中文和日文符号
-        return c == '_' || c == '・' || c == '∀' || c == '☆' || c == '♡'
-            || char.IsLetter(c)
+        // 下划线、日文点、字母和汉字、全角符号、中文和日文符号、数字
+        return c == '_' || c == '・'
+            || char.IsLetter(c) || Char.IsDigit(c)
             || (c >= 0xFF00 && c <= 0xFFEF)
             || (c >= 0x3000 && c <= 0x303F)
             || (c >= 0x3300 && c <= 0x33FF)

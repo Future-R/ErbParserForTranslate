@@ -24,6 +24,11 @@ public static class Configs
     // 执行完毕后自动打开文件夹
     public static bool autoOpenFolder = false;
 
+    // 刷完字典后参考CSV文件进行ERB全局替换，在项目初期可以解决一些内插变量名的错误，不是所有项目都需要的
+    public static bool autoReplace = false;
+
+    public static string[] autoReplaceRefer = new string[0];
+
     public static void Init()
     {
         // Config读取配置
@@ -45,6 +50,8 @@ public static class Configs
 
             forceFilter = (bool)configs["强力过滤变量名"].ToObject(typeof(bool));
             autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));
+            autoReplace = (bool)configs["变量自动修正"].ToObject(typeof(bool));
+            autoReplaceRefer = (string[])configs["变量自动修正参考文件"].ToObject(typeof(string[]));
         }
         else
         {

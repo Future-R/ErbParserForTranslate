@@ -251,6 +251,43 @@ public static class Tools
         return ahoCorasick.Process(gameContent);
     }
 
+    public static string TransResConfig(string gameContent, JArray jsonArray)
+    {
+        Dictionary<string, string> dictObjs = jsonArray.ToObject<List<JObject>>()
+            .Where(obj => obj.ContainsKey("stage") && (int)obj["stage"].ToObject(typeof(int)) > 0)
+            .ToDictionary(obj => obj["original"].ToString(), obj => obj["translation"].ToString());
+
+        // 将字符串按行分割
+        string[] lines = gameContent.Contains("\r\n") ? gameContent.Split("\r\n".ToCharArray(), StringSplitOptions.None) : gameContent.Split("\n".ToArray(), StringSplitOptions.None);
+
+        // 用于存储替换后的行
+        List<string> replacedLines = new List<string>();
+
+        foreach (var line in lines)
+        {
+            string transLine = line;
+            // 检查行是否以分号开始或是否包含逗号
+            int index = line.IndexOf(',');
+            if (!line.StartsWith(";") && index > -1)
+            {
+                // 截取第一个逗号前的字符串
+                string key = line.Substring(0, index).Trim();
+
+                // 如果字典中存在该键，则进行替换
+                if (dictObjs.ContainsKey(key))
+                {
+                    // 替换该行
+                    transLine = dictObjs[key] + line.Substring(index);
+                }
+            }
+            // 将处理后的行添加到列表中
+            replacedLines.Add(transLine);
+        }
+
+        // 将列表中的行重新组合成字符串
+        return string.Join(Environment.NewLine, replacedLines);
+    }
+
     /// <summary>
     /// 正则匹配并替换
     /// </summary>

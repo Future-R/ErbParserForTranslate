@@ -464,16 +464,38 @@ public class ERBParser
                     string leftValue = lineString.Substring(0, eqIndex).Trim();
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
 
-                    bool rightIsString = leftValue.Contains("RESULTS") || leftValue.Contains("LOCALS") || leftValue.Contains("ARGS");
-
                     var (vari1, text1) = ExpressionParser.Slash(leftValue);
                     varNameList.AddRange(vari1, contexts);
                     textList.AddRange(text1, contexts);
 
-                    if (!rightIsString ||
-                        rightValue.StartsWith("@") ||
-                        rightValue.Contains("\"") || rightValue.Contains("{") || rightValue.Contains(":") || rightValue.Contains("%") ||
-                        rightValue.Contains("LOCAL") || rightValue.Contains("RESULT") || rightValue.Contains("ARG"))
+                    // 如果等号右边有[]，判定为按钮，将按钮的内容拿去解析
+                    int leftBracket = rightValue.IndexOf('[');
+                    int rightBracket = rightValue.IndexOf(']');
+                    bool rightHasBotton = leftBracket != -1 && leftBracket < rightBracket;
+                    // 还是算了，不解析了
+                    //if (rightHasBotton)
+                    //{
+                    //    var (vari2, text2) = ExpressionParser.Slash(rightValue.Substring(leftBracket + 1, rightBracket - leftBracket - 1));
+                    //    varNameList.AddRange(vari2, contexts);
+                    //    textList.AddRange(text2, contexts);
+                    //}
+
+                    // 名前是一个临时处理，暂时没想好配置在什么地方
+                    bool rightIsString = leftValue.Contains("RESULTS") || leftValue.Contains("LOCALS") || leftValue.Contains("ARGS") || leftValue.Contains("名前") || rightHasBotton;
+                    bool rightIsNumber = leftValue.Contains("LOCAL") || leftValue.Contains("RESULT") || leftValue.Contains("ARG") ||
+                        leftValue.Contains("FLAG:") || leftValue.Contains("BASE:") || leftValue.Contains("ABL:") || leftValue.Contains("EXP:") ||
+                        leftValue.Contains("GLOBAL:") || leftValue.Contains("ITEM:") || leftValue.Contains("JUEL:") || leftValue.Contains("MARK:") ||
+                        leftValue.Contains("EX:") || leftValue.Contains("PALAM:") || leftValue.Contains("SOURCE:") || leftValue.Contains("STAIN:") ||
+                        leftValue.Contains("TALENT:") || leftValue.Contains("EQUIP:") || leftValue.Contains("TRAIN:") || leftValue.Contains("TSTR:")
+                        ;
+
+                    if (!rightIsString &&
+                        (
+                            rightIsNumber ||
+                            rightValue.StartsWith("@") ||
+                            rightValue.Contains("\"") || rightValue.Contains("{") || rightValue.Contains(":") || rightValue.Contains("%") ||
+                            rightValue.Contains("+") || rightValue.Contains("-") || rightValue.Contains("*") || rightValue.Contains("/")
+                        ))
                     {
                         var (vari2, text2) = ExpressionParser.Slash(rightValue);
                         varNameList.AddRange(vari2, contexts);

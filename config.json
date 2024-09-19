@@ -18,5 +18,31 @@
     ],
     "绝对安全的替换（暂不生效）": true,
     "强力过滤变量名": true,
-    "执行完毕后自动打开文件夹": true
+    "执行完毕后自动打开文件夹": true,
+    "变量自动修正": true,
+    "变量自动修正参考文件":
+    [
+        "Abl",
+        "Base",
+        "CFlag",
+        "CSTR",
+        "Ex",
+        "Exp",
+        "Flag",
+        "Global",
+        "Item",
+        "Juel",
+        "Mark",
+        "Nowex",
+        "Palam",
+        "Source",
+        "Stain",
+        "Talent",
+        "TCVAR",
+        "TEquip",
+        "Tflag",
+        "Train",
+        "TSTR",
+        "修正字典"
+    ]
 }
