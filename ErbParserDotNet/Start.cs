@@ -365,7 +365,7 @@ public static class Start
             {
                 if (Path.GetFileNameWithoutExtension(字典).Equals(参考文件, StringComparison.OrdinalIgnoreCase))
                 {
-                    存在的修正字典.Add(Path.Combine(CSV字典根目录, 参考文件));
+                    存在的修正字典.Add(Path.Combine(CSV字典根目录, Path.GetFileName(字典)));
                     break;
                 }
             }
