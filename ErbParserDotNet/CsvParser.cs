@@ -35,7 +35,8 @@ public class CSVParser
                 // 键值是相对路径(去除后缀)+ 5位数字ID
                 ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
                 ["original"] = item,
-                ["translation"] = ""
+                ["translation"] = "",
+                ["stage"] = 0
             };
         });
 
@@ -70,7 +71,8 @@ public class CSVParser
                             .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
                             ["original"] = originObjs[index],
-                            ["translation"] = referenceObjs[index]
+                            ["translation"] = referenceObjs[index],
+                            ["stage"] = 1
                         });
                     }
                     else
@@ -82,7 +84,8 @@ public class CSVParser
                             .Append(index.ToString().PadLeft(5, '0'))
                             .ToString(),
                             ["original"] = originObjs[index],
-                            ["translation"] = ""
+                            ["translation"] = "",
+                            ["stage"] = 0
                         });
                     }
                 }

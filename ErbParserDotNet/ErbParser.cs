@@ -609,6 +609,7 @@ public class ERBParser
                         .ToString(),
                     ["original"] = item.Item1,
                     ["translation"] = "",
+                    ["stage"] = 0,
                     ["context"] = item.Item2
                 };
             });
@@ -626,6 +627,7 @@ public class ERBParser
                         .ToString(),
                     ["original"] = item.Item1,
                     ["translation"] = "",
+                    ["stage"] = 0,
                     ["context"] = item.Item2
                 };
             });
@@ -657,6 +659,7 @@ public class ERBParser
                             .ToString(),
                             ["original"] = originObjs[index].Item1,
                             ["translation"] = referenceObjs[index].Item1,
+                            ["stage"] = 1,
                             ["context"] = originObjs[index].Item2
                         });
                     }
@@ -670,6 +673,7 @@ public class ERBParser
                             .ToString(),
                             ["original"] = originObjs[index].Item1,
                             ["translation"] = "",
+                            ["stage"] = 0,
                             ["context"] = originObjs[index].Item2
                         });
                     }

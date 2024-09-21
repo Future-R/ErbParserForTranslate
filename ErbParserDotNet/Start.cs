@@ -318,12 +318,22 @@ public static class Start
                     需要输出 = true;
                 }
                 // 引号括起的也要拿去和不括起的比较
-                else if ((!jobj.ContainsKey("stage") || jobj["stage"].ToString() == "0") && 已翻译字典.ContainsKey($"{原文.Trim('"')}"))
+                else if ((!jobj.ContainsKey("stage") || jobj["stage"].ToString() == "0"))
                 {
-                    Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('"')]}");
-                    jobj["translation"] = $"\"{已翻译字典[原文.Trim('"')]}\"";
-                    jobj["stage"] = 1;
-                    需要输出 = true;
+                    if (已翻译字典.ContainsKey($"{原文.Trim('"')}"))
+                    {
+                        Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('"')]}");
+                        jobj["translation"] = $"\"{已翻译字典[原文.Trim('"')]}\"";
+                        jobj["stage"] = 1;
+                        需要输出 = true;
+                    }
+                    else if (已翻译字典.ContainsKey($"{原文.Trim('%')}"))
+                    {
+                        Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('%')]}");
+                        jobj["translation"] = $"\"{已翻译字典[原文.Trim('%')]}\"";
+                        jobj["stage"] = 1;
+                        需要输出 = true;
+                    }
                 }
                 新文件.Add(jobj);
             }
@@ -383,13 +393,13 @@ public static class Start
         string 合并后的字符串 = "[" + pt输入.ToString().TrimEnd(',') + "]";
         JArray 修正字典 = JArray.Parse(合并后的字符串);
 
-
-        foreach (var 文件名 in 待汉化文件)
+        Console.WriteLine("根据CPU性能，修正过程可能会长达1秒~60秒，请勿中止程序！");
+        Parallel.ForEach(待汉化文件, (文件名) =>
         {
             string 待处理文本 = File.ReadAllText(文件名);
             待处理文本 = Tools.RegexReplace(待处理文本, 修正字典);
             File.WriteAllText(文件名, 待处理文本, Configs.fileEncoding);
-        }
+        });
 
         Timer.Stop();
         Console.WriteLine("自动修正完毕！");
