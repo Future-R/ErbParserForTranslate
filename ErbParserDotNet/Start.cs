@@ -18,6 +18,7 @@ public static class Start
     public static void Main()
     {
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
+        Console.OutputEncoding = new UTF8Encoding(true);
         // 读取config.json配置
         Configs.Init();
         // 主要是预编译正则
