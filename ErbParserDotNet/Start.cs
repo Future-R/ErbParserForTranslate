@@ -477,7 +477,7 @@ public static class Start
             // 如果目标脚本不存在，跳过这一条并报错
             if (!fileExist)
             {
-                if (isCSV || isIMG)
+                if (isIMG || (isCSV && !targetPath.Contains("修正字典")))
                 {
                     Console.WriteLine($"【错误】：没找到{targetPath}.CSV！");
                 }
