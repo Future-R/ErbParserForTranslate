@@ -27,7 +27,7 @@ public static class EraDictParser
                 解析Era字典();
                 break;
             case "1":
-                解析PT字典();
+                解析PT字典二级菜单();
                 break;
             case "2":
                 return;
@@ -56,14 +56,49 @@ public static class EraDictParser
         }
     }
 
-    public static void 解析PT字典()
+    public enum 导出模式
+    {
+        完整导出,
+        仅已翻译,
+        仅未翻译
+    }
+
+    public static void 解析PT字典二级菜单()
+    {
+        string menuString =
+@"请输入序号并回车：
+[ 0] - 【完整导出】所有字典条目
+[ 1] - 仅导出【已翻译】的字典条目
+[ 2] - 仅导出【未翻译】的字典条目
+[ 3] - 【返回】上一级";
+        string command = Tools.ReadLine(menuString);
+        switch (command)
+        {
+            case "0":
+                解析PT字典(导出模式.完整导出);
+                break;
+            case "1":
+                解析PT字典(导出模式.仅已翻译);
+                break;
+            case "2":
+                解析PT字典(导出模式.仅未翻译);
+                break;
+            case "3":
+                return;
+            default:
+                解析PT字典(导出模式.完整导出);
+                return;
+        }
+    }
+
+    public static void 解析PT字典(导出模式 模式)
     {
         string PT目录 = Tools.ReadLine("请拖入PT字典(json)目录：");
         string[] PT文件名组 = Directory.GetFiles(PT目录, "*.json", SearchOption.AllDirectories);
         Timer.Start();
         Parallel.ForEach(PT文件名组, pt文件 =>
         {
-            ParsePT(pt文件);
+            ParsePT(pt文件, 模式);
         });
         Timer.Stop();
         Console.WriteLine("转换完毕！");
@@ -73,7 +108,7 @@ public static class EraDictParser
         }
     }
 
-    public static void ParsePT(string filePath)
+    public static void ParsePT(string filePath, 导出模式 模式)
     {
         string json输入 = File.ReadAllText(filePath);
         // pt的json都是[起头的
@@ -84,22 +119,37 @@ public static class EraDictParser
         JArray jsonArray = JArray.Parse(json输入);
         StringBuilder 输出字符串 = new StringBuilder();
 
+        bool 导出已翻译 = 模式 == 导出模式.完整导出 || 模式 == 导出模式.仅已翻译;
+        bool 导出未翻译 = 模式 == 导出模式.完整导出 || 模式 == 导出模式.仅未翻译;
+
         foreach (var jobj in jsonArray.ToObject<List<JObject>>())
         {
             string 原文 = jobj["original"].ToString();
-            输出字符串.Append(原文);
-            输出字符串.Append("\t");
             if (jobj.ContainsKey("stage") && (int)jobj["stage"].ToObject(typeof(int)) > 0)
             {
-                输出字符串.AppendLine(jobj["translation"].ToString());
+                if (导出已翻译)
+                {
+                    输出字符串.Append(原文);
+                    输出字符串.Append("\t");
+                    输出字符串.AppendLine(jobj["translation"].ToString());
+                }
+
             }
             else
             {
-                输出字符串.AppendLine(原文);
+                if (导出未翻译)
+                {
+                    输出字符串.Append(原文);
+                    输出字符串.Append("\t");
+                    输出字符串.AppendLine(原文);
+                }
             }
         }
         string 输出文件名 = Path.ChangeExtension(filePath, "txt");
-        File.WriteAllText(输出文件名, 输出字符串.ToString());
+        if (输出字符串.Length > 0)
+        {
+            File.WriteAllText(输出文件名, 输出字符串.ToString());
+        }
         File.Delete(filePath);
     }
 
