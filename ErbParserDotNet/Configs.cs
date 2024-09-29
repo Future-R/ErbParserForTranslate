@@ -27,6 +27,10 @@ public static class Configs
     // 刷完字典后参考CSV文件进行ERB全局替换，在项目初期可以解决一些内插变量名的错误，不是所有项目都需要的
     public static bool autoReplace = false;
 
+    public static bool hideEngText = true;
+
+    public static bool mergeSameText = true;
+
     public static string[] autoReplaceRefer = new string[0];
 
     public static void Init()
@@ -52,6 +56,8 @@ public static class Configs
             autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));
             autoReplace = (bool)configs["变量自动修正"].ToObject(typeof(bool));
             autoReplaceRefer = (string[])configs["变量自动修正参考文件"].ToObject(typeof(string[]));
+            hideEngText = (bool)configs["隐藏英文词条"].ToObject(typeof(bool));
+            mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
         }
         else
         {

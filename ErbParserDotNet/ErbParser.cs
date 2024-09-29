@@ -516,11 +516,20 @@ public class ERBParser
     // 括号的特殊处理：没想好怎么处理，先按有括号就不拆的做法
     public List<(string, string)> VarNameListFilter(List<(string, string)> originalList)
     {
-        return originalList.Distinct()
+        // 过滤掉空字符串和数组
+        var filteredList = originalList
             .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
             .ToList();
+
+        // 合并相同词条
+        var tupleList = Configs.mergeSameText
+            ? filteredList.GroupBy(t => t.Item1).Select(g => g.First()).ToList()
+            : filteredList;
+
+        return tupleList;
     }
 
+    [Obsolete]
     public List<string> VarNameListFilter(List<string> originalList)
     {
         return originalList.Distinct()
@@ -532,12 +541,20 @@ public class ERBParser
     // 是否需要剔除当前文件的变量名，待观察
     public List<(string, string)> TextListFilter(List<(string, string)> originalList)
     {
-        return originalList
-            .Distinct()
+        // 过滤掉空字符串和数组
+        var filteredList = originalList
             .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
             .ToList();
+
+        // 合并相同词条
+        var tupleList = Configs.mergeSameText
+            ? filteredList.GroupBy(t => t.Item1).Select(g => g.First()).ToList()
+            : filteredList;
+
+        return tupleList;
     }
 
+    [Obsolete]
     public List<string> TextListFilter(List<string> originalList)
     {
         return originalList
@@ -601,16 +618,22 @@ public class ERBParser
         {
             var newObjs = TextListFilter(originalList.lines).Select((item, index) =>
             {
+                string original = item.Item1;
+                int stage = 0;
+                if (Configs.hideEngText && Tools.englishTextCatch.IsMatch(original))
+                {
+                    stage = -1;
+                }
                 return new JObject
                 {
                     ["key"] = new StringBuilder(type)
                         .Append(Path.ChangeExtension(relativePath, ""))
                         .Append(index.ToString().PadLeft(5, '0'))
                         .ToString(),
-                    ["original"] = item.Item1,
+                    ["original"] = original,
                     ["translation"] = "",
-                    ["stage"] = 0,
-                    ["context"] = item.Item2
+                    ["stage"] = stage,
+                    ["context"] = item.Item2,
                 };
             });
             objs.AddRange(newObjs);
@@ -619,6 +642,12 @@ public class ERBParser
         {
             var newObjs = VarNameListFilter(originalList.lines).Select((item, index) =>
             {
+                string original = item.Item1;
+                int stage = 0;
+                if (Configs.hideEngText && Tools.englishTextCatch.IsMatch(original))
+                {
+                    stage = -1;
+                }
                 return new JObject
                 {
                     ["key"] = new StringBuilder(type)
@@ -627,7 +656,7 @@ public class ERBParser
                         .ToString(),
                     ["original"] = item.Item1,
                     ["translation"] = "",
-                    ["stage"] = 0,
+                    ["stage"] = stage,
                     ["context"] = item.Item2
                 };
             });
@@ -645,38 +674,32 @@ public class ERBParser
             // 二次检查
             if (originObjs.Count == referenceObjs.Count)
             {
-                for (int index = 0; index < originObjs.Count; index++)
+                int index = 0;
+                foreach (var (origin, reference) in originObjs.Zip(referenceObjs, (o, r) => (o, r)))
                 {
-                    // 如果对比发现，参考和原版不一致，那么把参考的值填进translation
-                    if (originObjs[index].Item1 != referenceObjs[index].Item1)
+                    // 如果对比发现，参考和原版不一致，那么把参考的值填进translation，并且设置stage为已翻译
+                    bool isDiff = origin.Item1 != reference.Item1;
+                    // 键值是 类型 + 相对路径(去除后缀) + 5位数字ID
+                    string key = $"{type}{Path.ChangeExtension(relativePath, "")}{index++:D5}";
+                    string original = origin.Item1;
+                    string translation = isDiff ? reference.Item1 : "";
+                    int stage = isDiff ? 1 : 0;
+                    string context = origin.Item2;
+
+                    // 过滤纯英文词条
+                    if (Configs.hideEngText && Tools.englishTextCatch.IsMatch(original))
                     {
-                        objs.Add(new JObject
-                        {
-                            // 键值是 类型 + 相对路径(去除后缀) + 5位数字ID
-                            ["key"] = new StringBuilder(type)
-                            .Append(Path.ChangeExtension(relativePath, ""))
-                            .Append(index.ToString().PadLeft(5, '0'))
-                            .ToString(),
-                            ["original"] = originObjs[index].Item1,
-                            ["translation"] = referenceObjs[index].Item1,
-                            ["stage"] = 1,
-                            ["context"] = originObjs[index].Item2
-                        });
+                        stage = -1;
                     }
-                    else
+
+                    objs.Add(new JObject
                     {
-                        objs.Add(new JObject
-                        {
-                            ["key"] = new StringBuilder(type)
-                            .Append(Path.ChangeExtension(relativePath, ""))
-                            .Append(index.ToString().PadLeft(5, '0'))
-                            .ToString(),
-                            ["original"] = originObjs[index].Item1,
-                            ["translation"] = "",
-                            ["stage"] = 0,
-                            ["context"] = originObjs[index].Item2
-                        });
-                    }
+                        ["key"] = key,
+                        ["original"] = original,
+                        ["translation"] = translation,
+                        ["stage"] = stage,
+                        ["context"] = context
+                    });
                 }
                 return;
             }

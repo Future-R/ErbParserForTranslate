@@ -39,6 +39,11 @@ public static class Tools
     public static Regex resultsCatch;
 
     /// <summary>
+    /// 捕获RESULTS的右值，由于行内无法判断右值是否为字符串类型，只能通过此下策多少捞回一点
+    /// </summary>
+    public static Regex englishTextCatch;
+
+    /// <summary>
     /// 全局变量，似乎暂时用不到
     /// </summary>
     private static readonly string[] OriginVarName = new[]
@@ -80,6 +85,8 @@ public static class Tools
         dimFunction = new Regex(@"(\w+)\((.*?)\)", RegexOptions.Compiled);
 
         resultsCatch = new Regex(@"(?<=RESULTS:?.* = ).+", RegexOptions.Compiled);
+
+        englishTextCatch = new Regex(@"^[a-zA-Z0-9_.%\(\),+\-\*\\ \[\]{}'""]+$", RegexOptions.Compiled);
     }
 
     /// <summary>
