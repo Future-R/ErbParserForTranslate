@@ -23,12 +23,14 @@ public static class Start
         Configs.Init();
         // 主要是预编译正则
         Tools.Init();
+        Console.Title = $"字典工具{Configs.Version}";
 
         while (true)
         {
             // 主菜单
             string menuString =
-@"请输入序号并回车（默认为0）：
+@"
+请输入序号并回车（默认为0）：
 [ 0] - 用字典汉化游戏
 [ 1] - 从游戏中提取PT字典（初次提取）
 [ 2] - 补充新版本条目到字典（本体更新时提取）
@@ -573,6 +575,8 @@ public static class Start
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
         string resDirectory = Path.Combine(path, "resources");
+
+        Console.WriteLine("开始提取字典，根据CPU性能这可能需要2秒~60秒，请稍候……");
 
         Timer.Start();
 

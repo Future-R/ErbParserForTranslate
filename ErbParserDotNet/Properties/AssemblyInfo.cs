@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
 [assembly: AssemblyTitle("ErbParserDotNet")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Era Basic字典工具，提取文本生成字典，使用字典替换源代码，从而实现翻译。")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Mirai")]
 [assembly: AssemblyProduct("ErbParserDotNet")]
 [assembly: AssemblyCopyright("Copyright ©  2024")]
 [assembly: AssemblyTrademark("")]

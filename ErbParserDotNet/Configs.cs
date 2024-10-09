@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 public static class Configs
 {
+    public const string Version = "0.55";
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
@@ -30,6 +31,8 @@ public static class Configs
     public static bool hideEngText = true;
 
     public static bool mergeSameText = true;
+
+    public static bool hideVarOutput = false;
 
     public static string[] autoReplaceRefer = new string[0];
 
@@ -58,6 +61,7 @@ public static class Configs
             autoReplaceRefer = (string[])configs["变量自动修正参考文件"].ToObject(typeof(string[]));
             hideEngText = (bool)configs["隐藏英文词条"].ToObject(typeof(bool));
             mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
+            hideVarOutput = (bool)configs["屏蔽变量输出"].ToObject(typeof(bool));
         }
         else
         {
