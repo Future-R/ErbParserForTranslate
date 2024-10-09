@@ -66,6 +66,7 @@ public class ERBParser
             string lineString = line.Trim();
             // 匹配注释，注释可能在行尾
             // 注释的优先级居然比print低
+            // Emuera.Net居然在SPLIT里用;
             int cmtIndex = lineString.IndexOf(';');
             switch (cmtIndex)
             {
@@ -77,7 +78,7 @@ public class ERBParser
                     continue;
                 // 分号不在首位，检查前面是否是PRINT，如果是，正常通过；如果不是，把分号后的内容移除
                 default:
-                    if (!lineString.StartsWith("PRINT"))
+                    if (!lineString.StartsWith("PRINT") && !lineString.StartsWith("SPLIT"))
                     {
                         lineString = lineString.Substring(0, cmtIndex).TrimEnd();
                     }
@@ -638,7 +639,8 @@ public class ERBParser
             });
             objs.AddRange(newObjs);
         }
-        else
+        // 追加屏蔽变量输出的功能
+        else if (!Configs.hideVarOutput)
         {
             var newObjs = VarNameListFilter(originalList.lines).Select((item, index) =>
             {
