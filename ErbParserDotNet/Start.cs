@@ -310,27 +310,46 @@ public static class Start
             foreach (JObject jobj in 条目.Value.ToObject<List<JObject>>())
             {
                 string 原文 = jobj["original"].ToString();
-                if ((!jobj.ContainsKey("stage") || jobj["stage"].ToString() == "0") && 已翻译字典.ContainsKey(原文))
+                if (jobj["stage"].ToString() == "0")
                 {
-                    Console.WriteLine($"【翻译】{已翻译字典[原文]}");
-                    jobj["translation"] = 已翻译字典[原文];
-                    jobj["stage"] = 1;
-                    需要输出 = true;
-                }
-                // 引号括起的也要拿去和不括起的比较
-                else if ((!jobj.ContainsKey("stage") || jobj["stage"].ToString() == "0"))
-                {
-                    if (已翻译字典.ContainsKey($"{原文.Trim('"')}"))
+                    // 天麻临时特殊处理1
+                    Match IMGSRC = Regex.Match(原文, $"^\"<img src='(.*?)'>\"$");
+                    if (已翻译字典.ContainsKey(原文))
                     {
-                        Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('"')]}");
+                        Console.WriteLine($"【翻译】{已翻译字典[原文]}");
+                        jobj["translation"] = 已翻译字典[原文];
+                        jobj["stage"] = 1;
+                        需要输出 = true;
+                    }
+                    // 天麻临时特殊处理1
+                    else if (IMGSRC.Success && 已翻译字典.ContainsKey(IMGSRC.Groups[1].Value))
+                    {
+                        Console.WriteLine($"【天麻】{已翻译字典[IMGSRC.Groups[1].Value]}");
+                        jobj["translation"] = $"\"<img src='{已翻译字典[IMGSRC.Groups[1].Value]}'>\"";
+                        jobj["stage"] = 1;
+                        需要输出 = true;
+                    }
+                    // 引号括起的也要拿去和不括起的比较
+                    else if (已翻译字典.ContainsKey(原文.Trim('"')))
+                    {
+                        Console.WriteLine($"【引号】{已翻译字典[原文.Trim('"')]}");
                         jobj["translation"] = $"\"{已翻译字典[原文.Trim('"')]}\"";
                         jobj["stage"] = 1;
                         需要输出 = true;
                     }
-                    else if (已翻译字典.ContainsKey($"{原文.Trim('%')}"))
+                    // 百分号括起的也要拿去和不括起的比较
+                    else if (原文.StartsWith("%") && 原文.EndsWith("%") && 已翻译字典.ContainsKey(原文.Trim('%')))
                     {
-                        Console.WriteLine($"【翻译】{已翻译字典[原文.Trim('%')]}");
-                        jobj["translation"] = $"\"{已翻译字典[原文.Trim('%')]}\"";
+                        Console.WriteLine($"【百分】{已翻译字典[原文.Trim('%')]}");
+                        jobj["translation"] = $"%{已翻译字典[原文.Trim('%')]}%";
+                        jobj["stage"] = 1;
+                        需要输出 = true;
+                    }
+                    // 天麻临时特殊处理2
+                    else if (原文.StartsWith("IMGNO_") && 已翻译字典.ContainsKey(原文.Substring(6)))
+                    {
+                        Console.WriteLine($"【天麻】{已翻译字典[原文.Substring(6)]}");
+                        jobj["translation"] = $"IMGNO_{已翻译字典[原文.Substring(6)]}";
                         jobj["stage"] = 1;
                         需要输出 = true;
                     }
