@@ -297,6 +297,19 @@ public static class Start
                     }
                     else
                     {
+                        if (原文.StartsWith("\"") && !译文.StartsWith("\""))
+                        {
+                            Console.WriteLine($"【警告】“{原文}”的引号似乎被忽略了！");
+                        }
+                        if (原文.EndsWith("\"") && !译文.EndsWith("\""))
+                        {
+                            Console.WriteLine($"【警告】“{原文}”的引号似乎被忽略了！");
+                        }
+
+                        if ((原文.Count(c => c == '%') >= 2) && (译文.Count(c => c == '%') < 2))
+                        {
+                            Console.WriteLine($"【警告】“{原文}”的%似乎缺失了！");
+                        }
                         已翻译字典.Add(原文, 译文);
                     }
                 }
