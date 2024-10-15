@@ -308,7 +308,16 @@ public static class Start
 
                         if ((原文.Count(c => c == '%') >= 2) && (译文.Count(c => c == '%') < 2))
                         {
-                            Console.WriteLine($"【警告】“{原文}”的%似乎缺失了！");
+                            Console.WriteLine($"【警告】“{原文}”的百分号似乎缺失了！");
+                        }
+
+                        if (原文.Contains('{') && !译文.Contains('{'))
+                        {
+                            Console.WriteLine($"【警告】“{原文}”的左花括号似乎缺失了！");
+                        }
+                        if (原文.Contains('}') && !译文.Contains('}'))
+                        {
+                            Console.WriteLine($"【警告】“{原文}”的右花括号似乎缺失了！");
                         }
                         已翻译字典.Add(原文, 译文);
                     }
