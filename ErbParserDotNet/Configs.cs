@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 public static class Configs
 {
-    public const string Version = "0.55";
+    public const string Version = "0.56";
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
@@ -40,34 +40,65 @@ public static class Configs
     {
         // Config读取配置
         string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
-        if (File.Exists(configPath))
+        if (!File.Exists(configPath))
         {
-            string jsonContent = File.ReadAllText(configPath);
-            JObject configs = JsonConvert.DeserializeObject<JObject>(jsonContent);
+            var config = new
+            {
+                读取文件使用的编码 = "UTF8-BOM",
+                读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh" },
+                需要处理的操作符 = new string[]
+            {
+                "(", ")", "{", "}",
+                "?", "#",
+                "=", "+=", "-=", "*=", "/=",
+                ">", "<", "==", "!=", ">=", "<=",
+                "&&", "||", "&", "|", "!",
+                "+", "-", "*", "/", "%",
+                "++", "--",
+                ",", ":", "TO"
+            },
+                允许构成变量名的字符 = new string[] { "☆", "♡", "∀", "←", "→" },
+                绝对安全的替换暂不生效 = true,
+                强力过滤变量名 = true,
+                执行完毕后自动打开文件夹 = true,
+                变量自动修正 = true,
+                变量自动修正参考文件 = new string[]
+            {
+                "Abl", "Base", "CFlag", "CSTR", "Ex",
+                "Exp", "Flag", "Global", "Item", "Juel",
+                "Mark", "Nowex", "Palam", "Source", "Stain",
+                "Talent", "TCVAR", "TEquip", "Tflag", "Train",
+                "TSTR", "修正字典"
+            },
+                隐藏英文词条 = true,
+                合并同一文件的相同词条 = true,
+                屏蔽变量输出 = false
+            };
 
-            extensions = new HashSet<string>(JsonConvert.DeserializeObject<string[]>(configs["读取这些扩展名的游戏文件"].ToString()));
-
-            // Encoding.GetEncoding无法获取带BOM的UTF-8，这里做特殊处理
-            string encoding = configs["读取文件使用的编码"].ToString();
-            fileEncoding = encoding.Contains("BOM") ? new UTF8Encoding(true) : Encoding.GetEncoding(encoding);
-
-            operators = configs["需要处理的操作符"].ToObject<List<string>>();
-
-            var_operators = configs["允许构成变量名的字符"].ToObject<List<string>>();
-
-            forceFilter = (bool)configs["强力过滤变量名"].ToObject(typeof(bool));
-            autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));
-            autoReplace = (bool)configs["变量自动修正"].ToObject(typeof(bool));
-            autoReplaceRefer = (string[])configs["变量自动修正参考文件"].ToObject(typeof(string[]));
-            hideEngText = (bool)configs["隐藏英文词条"].ToObject(typeof(bool));
-            mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
-            hideVarOutput = (bool)configs["屏蔽变量输出"].ToObject(typeof(bool));
-        }
-        else
-        {
-            Console.WriteLine("【错误】：缺少config.json配置文件！");
+            string json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            File.WriteAllText(configPath, json);
+            Console.WriteLine("首次运行，已生成配置文件，请按任意键继续！");
             Console.ReadKey();
-            Environment.Exit(0);
         }
+        string jsonContent = File.ReadAllText(configPath);
+        JObject configs = JsonConvert.DeserializeObject<JObject>(jsonContent);
+
+        extensions = new HashSet<string>(JsonConvert.DeserializeObject<string[]>(configs["读取这些扩展名的游戏文件"].ToString()));
+
+        // Encoding.GetEncoding无法获取带BOM的UTF-8，这里做特殊处理
+        string encoding = configs["读取文件使用的编码"].ToString();
+        fileEncoding = encoding.Contains("BOM") ? new UTF8Encoding(true) : Encoding.GetEncoding(encoding);
+
+        operators = configs["需要处理的操作符"].ToObject<List<string>>();
+
+        var_operators = configs["允许构成变量名的字符"].ToObject<List<string>>();
+
+        forceFilter = (bool)configs["强力过滤变量名"].ToObject(typeof(bool));
+        autoOpenFolder = (bool)configs["执行完毕后自动打开文件夹"].ToObject(typeof(bool));
+        autoReplace = (bool)configs["变量自动修正"].ToObject(typeof(bool));
+        autoReplaceRefer = (string[])configs["变量自动修正参考文件"].ToObject(typeof(string[]));
+        hideEngText = (bool)configs["隐藏英文词条"].ToObject(typeof(bool));
+        mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
+        hideVarOutput = (bool)configs["屏蔽变量输出"].ToObject(typeof(bool));
     }
 }
