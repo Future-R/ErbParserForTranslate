@@ -517,12 +517,12 @@ public class ERBParser
                     //}
 
                     // 名前是一个临时处理，暂时没想好配置在什么地方
-                    bool rightIsString = leftValue.Contains("RESULTS") || leftValue.Contains("LOCALS") || leftValue.Contains("ARGS") || leftValue.Contains("名前") || rightHasBotton;
+                    bool rightIsString = leftValue.Contains("RESULTS") || leftValue.Contains("LOCALS") || leftValue.Contains("ARGS") || leftValue.Contains("STR:") || leftValue.Contains("名前") || rightHasBotton;
                     bool rightIsNumber = leftValue.Contains("LOCAL") || leftValue.Contains("RESULT") || leftValue.Contains("ARG") ||
                         leftValue.Contains("FLAG:") || leftValue.Contains("BASE:") || leftValue.Contains("ABL:") || leftValue.Contains("EXP:") ||
                         leftValue.Contains("GLOBAL:") || leftValue.Contains("ITEM:") || leftValue.Contains("JUEL:") || leftValue.Contains("MARK:") ||
                         leftValue.Contains("EX:") || leftValue.Contains("PALAM:") || leftValue.Contains("SOURCE:") || leftValue.Contains("STAIN:") ||
-                        leftValue.Contains("TALENT:") || leftValue.Contains("EQUIP:") || leftValue.Contains("TRAIN:") || leftValue.Contains("TSTR:")
+                        leftValue.Contains("TALENT:") || leftValue.Contains("EQUIP:") || leftValue.Contains("TRAIN:")
                         ;
 
                     if (!rightIsString &&

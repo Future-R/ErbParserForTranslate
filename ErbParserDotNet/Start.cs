@@ -436,7 +436,7 @@ public static class Start
         string 合并后的字符串 = "[" + pt输入.ToString().TrimEnd(',') + "]";
         JArray 修正字典 = JArray.Parse(合并后的字符串);
 
-        Console.WriteLine("根据CPU性能，修正过程可能会长达1秒~60秒，请勿中止程序！");
+        Console.WriteLine("根据CPU性能与磁盘读写速度，修正过程可能会长达1秒~60秒，请勿中止程序！");
         Parallel.ForEach(待汉化文件, (文件名) =>
         {
             string 待处理文本 = File.ReadAllText(文件名);
@@ -617,7 +617,7 @@ public static class Start
         string erbDirectory = Path.Combine(path, "ERB");
         string resDirectory = Path.Combine(path, "resources");
 
-        Console.WriteLine("开始提取字典，根据CPU性能这可能需要2秒~60秒，请稍候……");
+        Console.WriteLine("开始提取字典，根据CPU性能与磁盘读写速度这可能需要2秒~60秒，请稍候……");
 
         Timer.Start();
 
