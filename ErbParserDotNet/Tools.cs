@@ -356,4 +356,16 @@ public static class Tools
         }
         return value;
     }
+
+    public static (string left, string right) GetSlashStringCouple(string context, char chara)
+    {
+        int index = context.IndexOf(chara);
+        if (index != -1)
+        {
+            string leftPart = context.Substring(0, index);
+            string rightPart = context.Substring(index + 1);
+            return (leftPart, rightPart);
+        }
+        return (null, null);
+    }
 }

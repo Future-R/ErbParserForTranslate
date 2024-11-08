@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 public static class Configs
 {
-    public const string Version = "0.56";
+    public const string Version = "0.57";
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
@@ -34,6 +34,8 @@ public static class Configs
 
     public static bool hideVarOutput = false;
 
+    public static bool mergeString = false;
+
     public static string[] autoReplaceRefer = new string[0];
 
     public static void Init()
@@ -45,7 +47,15 @@ public static class Configs
             var config = new
             {
                 读取文件使用的编码 = "UTF8-BOM",
+                强力过滤变量名 = true,
+                执行完毕后自动打开文件夹 = true,
+                变量自动修正 = true,
+                隐藏英文词条 = true,
+                合并同一文件的相同词条 = true,
+                屏蔽变量输出 = false,
+                合并联立字符串 = true,
                 读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh" },
+                允许构成变量名的字符 = new string[] { "☆", "♡", "∀", "←", "→" },
                 需要处理的操作符 = new string[]
             {
                 "(", ")", "{", "}",
@@ -57,11 +67,6 @@ public static class Configs
                 "++", "--",
                 ",", ":", "TO"
             },
-                允许构成变量名的字符 = new string[] { "☆", "♡", "∀", "←", "→" },
-                绝对安全的替换暂不生效 = true,
-                强力过滤变量名 = true,
-                执行完毕后自动打开文件夹 = true,
-                变量自动修正 = true,
                 变量自动修正参考文件 = new string[]
             {
                 "Abl", "Base", "CFlag", "CSTR", "Ex",
@@ -70,9 +75,6 @@ public static class Configs
                 "Talent", "TCVAR", "TEquip", "Tflag", "Train",
                 "TSTR", "修正字典"
             },
-                隐藏英文词条 = true,
-                合并同一文件的相同词条 = true,
-                屏蔽变量输出 = false
             };
 
             string json = JsonConvert.SerializeObject(config, Formatting.Indented);
@@ -100,5 +102,6 @@ public static class Configs
         hideEngText = (bool)configs["隐藏英文词条"].ToObject(typeof(bool));
         mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
         hideVarOutput = (bool)configs["屏蔽变量输出"].ToObject(typeof(bool));
+        mergeString = (bool)configs["合并联立字符串"].ToObject(typeof(bool));
     }
 }

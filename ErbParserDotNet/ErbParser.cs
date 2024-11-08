@@ -136,9 +136,32 @@ public class ERBParser
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
-                var (vari, text) = ExpressionParser.Slash(rightValue);
-                varNameList.AddRange(vari, contexts);
-                textList.AddRange(text, contexts);
+
+                // 如果要合并参数中的联立字符串
+                if (Configs.mergeString)
+                {
+                    string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var item in parts)
+                    {
+                        if (item.Contains('"'))
+                        {
+                            textList.Add(item, contexts);
+                        }
+                        else
+                        {
+                            var (vari, text) = ExpressionParser.Slash(item);
+                            varNameList.AddRange(vari, contexts);
+                            textList.AddRange(text, contexts);
+                        }
+                    }
+                }
+                // 通常模式
+                else
+                {
+                    var (vari, text) = ExpressionParser.Slash(rightValue);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
+                }
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
             else if (lineString.StartsWith("#DIM"))
@@ -450,8 +473,20 @@ public class ERBParser
                     continue;
                 }
                 // 匹配+=和-=赋值，整行拿去做判别式解析试试
+                // 如果右值有引号，说明有字符串联立
                 if (lineString.Contains("+=") || lineString.Contains("-=") || lineString.Contains("*=") || lineString.Contains("/=") || lineString.Contains("&=") || lineString.Contains("|="))
                 {
+                    if (Configs.mergeString)
+                    {
+                        var (left, right) = Tools.GetSlashStringCouple(lineString, '=');
+                        if (right.Contains('"'))
+                        {
+                            varNameList.Add(left.Trim(), contexts);
+                            textList.Add(right, contexts);
+                            continue;
+                        }
+                    }
+
                     var (vari, text) = ExpressionParser.Slash(lineString);
                     varNameList.AddRange(vari, contexts);
                     textList.AddRange(text, contexts);
@@ -588,7 +623,16 @@ public class ERBParser
         if (allObjs.Count > 0)
         {
             string jsonContent = JsonConvert.SerializeObject(allObjs, Formatting.Indented);
-            File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+            try
+            {
+                File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("生成文件失败，可能是硬盘空间不足，请至少准备2G的硬盘空间");
+                Console.ReadKey();
+            }
+            
         }
     }
 

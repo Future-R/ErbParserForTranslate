@@ -19,7 +19,8 @@ public static class EraDictParser
 @"请输入序号并回车：
 [ 0] - ERA字典转PT字典
 [ 1] - PT字典转ERA字典
-[ 2] - 还是算了";
+[ 2] - 女仆酱字典转PT字典（理论上不用转换也可以上传Paratranz）
+[ 3] - 还是算了";
         string command = Tools.ReadLine(menuString);
         switch (command)
         {
@@ -30,9 +31,29 @@ public static class EraDictParser
                 解析PT字典二级菜单();
                 break;
             case "2":
+                解析女仆酱字典();
+                break;
+            case "3":
                 return;
             default:
                 return;
+        }
+    }
+
+    public static void 解析女仆酱字典()
+    {
+        string ERA目录 = Tools.ReadLine("请拖入女仆酱字典(txt)目录：");
+        string[] ERA文件名组 = Directory.GetFiles(ERA目录, "*.txt", SearchOption.AllDirectories);
+        Timer.Start();
+        Parallel.ForEach(ERA文件名组, era文件 =>
+        {
+            ParseERA(era文件, true);
+        });
+        Timer.Stop();
+        Console.WriteLine("转换完毕！");
+        if (Configs.autoOpenFolder)
+        {
+            Process.Start(ERA目录);
         }
     }
     public static void 解析Era字典()
@@ -153,7 +174,7 @@ public static class EraDictParser
         File.Delete(filePath);
     }
 
-    public static void ParseERA(string filePath)
+    public static void ParseERA(string filePath, bool 女仆酱模式 = false)
     {
         List<string> lineList = new List<string>();
         try
@@ -172,33 +193,48 @@ public static class EraDictParser
         int 序号 = 0;
         foreach (string line in lineList)
         {
-            if (!line.Contains("\t"))
+            if (女仆酱模式)
             {
-                continue;
+                JObject pzobj = new JObject
+                {
+                    ["key"] = 文件名 + 序号.ToString().PadLeft(5, '0'),
+                    ["original"] = line,
+                    ["translation"] = line,
+                    ["stage"] = 0
+                };
+                PZJsonObj.Add(pzobj);
+                序号++;
             }
             else
             {
-                string[] 键值数组 = line.Split(new[] { "\t" }, StringSplitOptions.None);
-                if (键值数组.Length == 2)
+                if (!line.Contains("\t"))
                 {
-                    string 原文 = 键值数组[0];
-                    string 译文 = 键值数组[1];
-                    int stage = 1;
-                    if (原文 == 译文)
+                    continue;
+                }
+                else
+                {
+                    string[] 键值数组 = line.Split(new[] { "\t" }, StringSplitOptions.None);
+                    if (键值数组.Length == 2)
                     {
-                        译文 = "";
-                        stage = 0;
-                    }
-                    JObject pzobj = new JObject
-                    {
-                        ["key"] = 文件名 + 序号.ToString().PadLeft(5, '0'),
-                        ["original"] = 原文,
-                        ["translation"] = 译文,
-                        ["stage"] = stage
-                    };
+                        string 原文 = 键值数组[0];
+                        string 译文 = 键值数组[1];
+                        int stage = 1;
+                        if (原文 == 译文)
+                        {
+                            译文 = "";
+                            stage = 0;
+                        }
+                        JObject pzobj = new JObject
+                        {
+                            ["key"] = 文件名 + 序号.ToString().PadLeft(5, '0'),
+                            ["original"] = 原文,
+                            ["translation"] = 译文,
+                            ["stage"] = stage
+                        };
 
-                    PZJsonObj.Add(pzobj);
-                    序号++;
+                        PZJsonObj.Add(pzobj);
+                        序号++;
+                    }
                 }
             }
         }
