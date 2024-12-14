@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 public class ERBParser
 {
     // 想了想，反正单纯只是提取文本，不需要Execute，所以只需要逐行提取，不需要保存结构
+    // 很后悔，刚接触era的时候不知道这语言是如此强上下文，屎山已经不想动了
     List<string> lineList = new List<string>();
 
     StringList varNameList = new StringList();
@@ -262,6 +263,14 @@ public class ERBParser
                     varNameList.AddRange(vari, contexts);
                     textList.AddRange(text, contexts);
                 }
+            }
+            // .NET版新增了SQL语句
+            else if (lineString.StartsWith("SQL_EXECUTE") )
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+                // SQL语句我就不解析了，直接全部拿出来翻译可能还更快
+                textList.Add(rightValue, contexts);
             }
             // FOR循环 int,int,int，逗号分隔后全部送去变量名
             else if (lineString.StartsWith("FOR "))
