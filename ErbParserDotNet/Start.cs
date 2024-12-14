@@ -334,7 +334,7 @@ public static class Start
             foreach (JObject jobj in 条目.Value.ToObject<List<JObject>>())
             {
                 string 原文 = jobj["original"].ToString();
-                if (jobj["stage"].ToString() == "0")
+                if (jobj.ContainsKey("stage") && jobj["stage"].ToString() == "0")
                 {
                     // 天麻临时特殊处理1
                     Match IMGSRC = Regex.Match(原文, $"^\"<img src='(.*?)'>\"$");
