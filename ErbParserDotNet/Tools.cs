@@ -303,13 +303,14 @@ public static class Tools
     /// <returns></returns>
     public static string RegexReplace(string gameContent, JArray jsonArray)
     {
+        gameContent = gameContent.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", " ");
         Dictionary<string, string> replacements = new Dictionary<string, string>();
         var dictObjs = jsonArray.ToObject<List<JObject>>()
             .Where(obj => obj.ContainsKey("stage") && (int)obj["stage"].ToObject(typeof(int)) > 0)
             .OrderByDescending(obj => obj["original"].ToString().Length);
         foreach (var dictObj in dictObjs)
         {
-            string key = dictObj["original"].ToString();
+            string key = dictObj["original"].ToString().Replace("\r\n", "\n").Replace("\r", "\n").Replace("\\n", "\n").Replace("\n\n", "\n");
             string value = dictObj["translation"].ToString();
 
             if (!replacements.ContainsKey(key))
@@ -332,11 +333,11 @@ public static class Tools
             string value;
             if (replacements.TryGetValue(match.Value, out value))
             {
-                return value;
+                return value.Replace("\\n", Environment.NewLine);
             }
             else
             {
-                return match.Value;
+                return match.Value.Replace("\\n", Environment.NewLine);
             }
         });
     }

@@ -268,7 +268,7 @@ public class ERBParser
             else if (lineString.StartsWith("SQL_EXECUTE") )
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
-                string rightValue = lineString.Substring(spIndex).TrimStart();
+                string rightValue = lineString.Substring(spIndex).TrimStart().Replace("\r\n", "\n").Replace("\r", "\n");
                 // SQL语句我就不解析了，直接全部拿出来翻译可能还更快
                 textList.Add(rightValue, contexts);
             }
