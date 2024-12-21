@@ -51,7 +51,7 @@ public class ERBParser
             {
                 content = File.ReadAllText(Path.ChangeExtension(filePath, "ERH"), Configs.fileEncoding) + "\n" + content;
             }
-            lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", " ").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
+            lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", "    ").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
             // 处理花括号合并多行代码
             lineList = mergeLines(lineList);
         }
@@ -133,35 +133,71 @@ public class ERBParser
                 varNameList.AddRange(parts.Skip(1), contexts);
             }
             // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
+            // call有两种形式，一种是CALL 函数名, 参数1, 参数2，另一种是CALL 函数名(参数1,参数2)
+            // 之前的做法只考虑了第一种形式，现在要考虑第二种形式
             else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("JUMP "))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
 
-                // 如果要合并参数中的联立字符串
-                if (Configs.mergeString)
+                // 如果逗号的下标小于第一个左括号，则说明是CALL Func(Pram)形式，否则是CALL Func, Pram形式
+                int cmIndex = rightValue.IndexOf(",");
+                int lfIndex = rightValue.IndexOf("(");
+                if (cmIndex < lfIndex)
                 {
-                    string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var item in parts)
+                    string functionName = rightValue.Substring(0, lfIndex);
+                    rightValue = rightValue.Substring(lfIndex).TrimEnd(')');
+                    if (Configs.mergeString)
                     {
-                        if (item.Contains('"'))
+                        string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var item in parts)
                         {
-                            textList.Add(item, contexts);
-                        }
-                        else
-                        {
-                            var (vari, text) = ExpressionParser.Slash(item);
-                            varNameList.AddRange(vari, contexts);
-                            textList.AddRange(text, contexts);
+                            if (item.Contains('"'))
+                            {
+                                textList.Add(item, contexts);
+                            }
+                            else
+                            {
+                                var (vari, text) = ExpressionParser.Slash(item);
+                                varNameList.AddRange(vari, contexts);
+                                textList.AddRange(text, contexts);
+                            }
                         }
                     }
+                    else
+                    {
+                        var (vari, text) = ExpressionParser.Slash(rightValue);
+                        varNameList.AddRange(vari, contexts);
+                        textList.AddRange(text, contexts);
+                    }
                 }
-                // 通常模式
                 else
                 {
-                    var (vari, text) = ExpressionParser.Slash(rightValue);
-                    varNameList.AddRange(vari, contexts);
-                    textList.AddRange(text, contexts);
+                    // 如果要合并参数中的联立字符串
+                    if (Configs.mergeString)
+                    {
+                        string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var item in parts)
+                        {
+                            if (item.Contains('"'))
+                            {
+                                textList.Add(item, contexts);
+                            }
+                            else
+                            {
+                                var (vari, text) = ExpressionParser.Slash(item);
+                                varNameList.AddRange(vari, contexts);
+                                textList.AddRange(text, contexts);
+                            }
+                        }
+                    }
+                    // 通常模式
+                    else
+                    {
+                        var (vari, text) = ExpressionParser.Slash(rightValue);
+                        varNameList.AddRange(vari, contexts);
+                        textList.AddRange(text, contexts);
+                    }
                 }
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
@@ -265,7 +301,7 @@ public class ERBParser
                 }
             }
             // .NET版新增了SQL语句
-            else if (lineString.StartsWith("SQL_EXECUTE") )
+            else if (lineString.StartsWith("SQL_EXECUTE"))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).TrimStart().Replace("\r\n", "\n").Replace("\r", "\n");
@@ -641,7 +677,7 @@ public class ERBParser
                 Console.WriteLine("生成文件失败，可能是硬盘空间不足，请至少准备2G的硬盘空间");
                 Console.ReadKey();
             }
-            
+
         }
     }
 
