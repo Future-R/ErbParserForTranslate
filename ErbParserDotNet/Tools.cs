@@ -303,7 +303,7 @@ public static class Tools
     /// <returns></returns>
     public static string RegexReplace(string gameContent, JArray jsonArray)
     {
-        gameContent = gameContent.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", "    ");
+        gameContent = gameContent.Replace("\r\n", "\n").Replace("\r", "\n").Replace("<Tab>", "\t");
         Dictionary<string, string> replacements = new Dictionary<string, string>();
         var dictObjs = jsonArray.ToObject<List<JObject>>()
             .Where(obj => obj.ContainsKey("stage") && (int)obj["stage"].ToObject(typeof(int)) > 0)

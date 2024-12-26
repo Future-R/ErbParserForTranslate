@@ -51,7 +51,7 @@ public class ERBParser
             {
                 content = File.ReadAllText(Path.ChangeExtension(filePath, "ERH"), Configs.fileEncoding) + "\n" + content;
             }
-            lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", "    ").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
+            lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", "<Tab>").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
             // 处理花括号合并多行代码
             lineList = mergeLines(lineList);
         }
