@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 public static class Configs
 {
-    public const string Version = "0.58";
+    public const string Version = "0.58a";
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }
@@ -51,7 +51,7 @@ public static class Configs
                 执行完毕后自动打开文件夹 = true,
                 变量自动修正 = true,
                 隐藏英文词条 = true,
-                合并同一文件的相同词条 = true,
+                合并同一文件的相同词条 = false,
                 屏蔽变量输出 = false,
                 合并联立字符串 = true,
                 读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh" },

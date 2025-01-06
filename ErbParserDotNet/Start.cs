@@ -660,7 +660,8 @@ public static class Start
         }
         else
         {
-            throw new DirectoryNotFoundException($"找不到CSV目录: {csvDirectory}");
+            Console.WriteLine($"【警告】找不到CSV目录: {csvDirectory}！");
+            Console.ReadKey();
         }
         if (Directory.Exists(erbDirectory))
         {
@@ -707,6 +708,7 @@ public static class Start
                     {
                         ERBParser referenceParser = new ERBParser();
                         referenceParser.ParseFile(referencePath);
+                        //parser.DebugPrint();
                         parser.WriteJson(targetFile, relativePath, referenceParser.GetListTuple());
                     }
                     else
@@ -723,7 +725,8 @@ public static class Start
         }
         else
         {
-            throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
+            Console.WriteLine($"【警告】找不到ERB目录: {erbDirectory}");
+            Console.ReadKey();
         }
         if (Directory.Exists(resDirectory))
         {

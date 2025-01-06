@@ -51,7 +51,7 @@ public class ERBParser
             {
                 content = File.ReadAllText(Path.ChangeExtension(filePath, "ERH"), Configs.fileEncoding) + "\n" + content;
             }
-            lineList = content.Replace(Environment.NewLine, "\n").Replace("\t", "<Tab>").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
+            lineList = content.Replace(Environment.NewLine, "\n").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
             // 处理花括号合并多行代码
             lineList = mergeLines(lineList);
         }
@@ -64,7 +64,8 @@ public class ERBParser
         for (int i = 0; i < lineList.Count; i++)
         {
             string line = lineList[i];
-            string lineString = line.Trim();
+            // 先trim再转义tab，免得影响StartWith判断
+            string lineString = line.Trim().Replace("\t", "<Tab>");
             // 匹配注释，注释可能在行尾
             // 注释的优先级居然比print低
             // Emuera.Net居然在SPLIT里用;
@@ -813,12 +814,14 @@ public class ERBParser
         Console.WriteLine("======变量名======");
         foreach (var item in VarNameListFilter(varNameList.lines))
         {
-            Console.WriteLine(item);
+            Console.WriteLine($"{item.Item1}");
+            Console.WriteLine();
         }
         Console.WriteLine("======纯文本======");
         foreach (var item in TextListFilter(textList.lines))
         {
-            Console.WriteLine(item);
+            Console.WriteLine($"{item.Item1}");
+            Console.WriteLine();
         }
     }
 
