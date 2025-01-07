@@ -117,7 +117,7 @@ public static class Start
                 encoding = Encoding.GetEncoding(cdet.Charset);
             }
              
-            if (Equals(encoding, Encoding.UTF8)) return;
+            if (Equals(encoding, Encoding.UTF8) || Equals(encoding,Encoding.Default)) return;
            
             Console.WriteLine($"当前编码为{encoding.WebName}");
             Console.WriteLine($"正在转换{filepath}的编码为UTF-8");
