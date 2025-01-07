@@ -17,6 +17,7 @@ public static class Start
 
     public static void Main()
     {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
         Console.OutputEncoding = new UTF8Encoding(true);
         // 读取config.json配置
@@ -39,8 +40,9 @@ public static class Start
 [ 5] - 将MTool机翻导入PT字典
 [ 6] - 查重，填充未翻译，警告不一致翻译
 [ 7] - Era传统字典转PT字典
-[ 8] - 设置
-[ 9] - 访问项目主页";
+[ 8] - 将所有文件转换为UTF-8编码
+[ 9] - 设置
+[10] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -72,9 +74,13 @@ public static class Start
                     EraDictParser.二级菜单();
                     break;
                 case "8":
-                    Settings();
+                    ConvertToUtf8(appPath);
                     break;
                 case "9":
+                   
+                    Settings();
+                    break;
+                case "10":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -90,7 +96,35 @@ public static class Start
         }
     }
 
-
+    private static void ConvertToUtf8(string appPath)
+    {
+        var files = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories).Where(file=>file.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
+                                                                                                file.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) ||
+                                                                                                file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+        Parallel.ForEach(files, filepath =>
+        {
+            Console.WriteLine($"正在转换{filepath}");
+            var file = new FileStream(filepath, FileMode.Open, FileAccess.Read);
+            var cdet = new Ude.CharsetDetector();
+            cdet.Feed(file);
+            cdet.DataEnd();
+            file.Close();
+            file.Dispose();
+            var encoding = Encoding.Default;
+            if (cdet.Charset != null) {
+                Console.WriteLine("Charset: {0}, confidence: {1}", 
+                    cdet.Charset, cdet.Confidence);
+                encoding = Encoding.GetEncoding(cdet.Charset);
+            }
+             
+            if (Equals(encoding, Encoding.UTF8)) return;
+           
+            Console.WriteLine($"当前编码为{encoding.WebName}");
+            Console.WriteLine($"正在转换{filepath}的编码为UTF-8");
+            var content = File.ReadAllText(filepath, encoding);
+            File.WriteAllText(filepath, content, Encoding.UTF8);
+        });
+    }
 
     static void Settings()
     {
