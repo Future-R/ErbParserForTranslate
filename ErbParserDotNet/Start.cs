@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sharprompt;
 using static ERBParser;
 
 public static class Start
@@ -18,13 +19,17 @@ public static class Start
     public static void Main()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
-        Console.OutputEncoding = new UTF8Encoding(true);
+        string appPath     =AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var    currentPath = Directory.GetCurrentDirectory().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        Console.OutputEncoding = Encoding.UTF8;
         // 读取config.json配置
         Configs.Init();
         // 主要是预编译正则
         Tools.Init();
         Console.Title = $"字典工具{Configs.Version}";
+        
+        var isEquals = appPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase);
+        var directories =isEquals ? new string[] { appPath } : new string[] { appPath, currentPath };
 
         while (true)
         {
@@ -74,10 +79,9 @@ public static class Start
                     EraDictParser.二级菜单();
                     break;
                 case "8":
-                    ConvertToUtf8(appPath);
+                    ConvertToUtf8(directories);
                     break;
                 case "9":
-                   
                     Settings();
                     break;
                 case "10":
@@ -96,14 +100,28 @@ public static class Start
         }
     }
 
-    private static void ConvertToUtf8(string appPath)
+    private static void ConvertToUtf8(string[] directories)
     {
+        var eraGameDirs = new List<string>();
+        foreach (var directory in directories)
+        {
+            var subDirs = Directory.GetDirectories(directory);
+            eraGameDirs.AddRange(from subDir in subDirs let erbDir = Path.Combine(subDir, "erb") where Directory.Exists(erbDir) select subDir);
+        }
+        if (eraGameDirs.Count == 0)
+        {
+            Console.WriteLine("未找到任何Era游戏目录！");
+            Console.WriteLine($"请把era游戏目录拖到以下目录：{Environment.NewLine}{string.Join(Environment.NewLine, directories)}");
+            return;
+        }
+        
+        var appPath = Prompt.Select("请选择一个目录",eraGameDirs);
+        Console.WriteLine($"正在转换{appPath}下的所有文件为UTF-8编码……");
         var files = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories).Where(file=>file.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
                                                                                                 file.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) ||
                                                                                                 file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
         Parallel.ForEach(files, filepath =>
         {
-            Console.WriteLine($"正在转换{filepath}");
             var file = new FileStream(filepath, FileMode.Open, FileAccess.Read);
             var cdet = new Ude.CharsetDetector();
             cdet.Feed(file);
@@ -118,12 +136,11 @@ public static class Start
             }
              
             if (Equals(encoding, Encoding.UTF8) || Equals(encoding,Encoding.Default)) return;
-           
-            Console.WriteLine($"当前编码为{encoding.WebName}");
-            Console.WriteLine($"正在转换{filepath}的编码为UTF-8");
             var content = File.ReadAllText(filepath, encoding);
             File.WriteAllText(filepath, content, Encoding.UTF8);
         });
+        Console.WriteLine("转换完成！");
+        Console.ReadKey();
     }
 
     static void Settings()
