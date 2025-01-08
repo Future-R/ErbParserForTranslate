@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sharprompt;
 using static ERBParser;
 
 public static class Start
@@ -17,13 +18,18 @@ public static class Start
 
     public static void Main()
     {
-        string appPath = System.AppDomain.CurrentDomain.BaseDirectory;
-        Console.OutputEncoding = new UTF8Encoding(true);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        string appPath     =AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var    currentPath = Directory.GetCurrentDirectory().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        Console.OutputEncoding = Encoding.UTF8;
         // 读取config.json配置
         Configs.Init();
         // 主要是预编译正则
         Tools.Init();
         Console.Title = $"字典工具{Configs.Version}";
+        
+        var isEquals = appPath.Equals(currentPath, StringComparison.OrdinalIgnoreCase);
+        var directories =isEquals ? new string[] { appPath } : new string[] { appPath, currentPath };
 
         while (true)
         {
@@ -39,8 +45,9 @@ public static class Start
 [ 5] - 将MTool机翻导入PT字典
 [ 6] - 查重，填充未翻译，警告不一致翻译
 [ 7] - Era传统字典转PT字典
-[ 8] - 设置
-[ 9] - 访问项目主页";
+[ 8] - 将所有文件转换为UTF-8编码
+[ 9] - 设置
+[10] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -72,9 +79,12 @@ public static class Start
                     EraDictParser.二级菜单();
                     break;
                 case "8":
-                    Settings();
+                    ConvertToUtf8(directories);
                     break;
                 case "9":
+                    Settings();
+                    break;
+                case "10":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -90,7 +100,48 @@ public static class Start
         }
     }
 
-
+    private static void ConvertToUtf8(string[] directories)
+    {
+        var eraGameDirs = new List<string>();
+        foreach (var directory in directories)
+        {
+            var subDirs = Directory.GetDirectories(directory);
+            eraGameDirs.AddRange(from subDir in subDirs let erbDir = Path.Combine(subDir, "erb") where Directory.Exists(erbDir) select subDir);
+        }
+        if (eraGameDirs.Count == 0)
+        {
+            Console.WriteLine("未找到任何Era游戏目录！");
+            Console.WriteLine($"请把era游戏目录拖到以下目录：{Environment.NewLine}{string.Join(Environment.NewLine, directories)}");
+            return;
+        }
+        
+        var appPath = Prompt.Select("请选择一个目录",eraGameDirs);
+        Console.WriteLine($"正在转换{appPath}下的所有文件为UTF-8编码……");
+        var files = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories).Where(file=>file.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
+                                                                                                file.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) ||
+                                                                                                file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+        Parallel.ForEach(files, filepath =>
+        {
+            var file = new FileStream(filepath, FileMode.Open, FileAccess.Read);
+            var cdet = new Ude.CharsetDetector();
+            cdet.Feed(file);
+            cdet.DataEnd();
+            file.Close();
+            file.Dispose();
+            var encoding = Encoding.Default;
+            if (cdet.Charset != null) {
+                Console.WriteLine("Charset: {0}, confidence: {1}", 
+                    cdet.Charset, cdet.Confidence);
+                encoding = Encoding.GetEncoding(cdet.Charset);
+            }
+             
+            if (Equals(encoding, Encoding.UTF8) || Equals(encoding,Encoding.Default)) return;
+            var content = File.ReadAllText(filepath, encoding);
+            File.WriteAllText(filepath, content, Encoding.UTF8);
+        });
+        Console.WriteLine("转换完成！");
+        Console.ReadKey();
+    }
 
     static void Settings()
     {
