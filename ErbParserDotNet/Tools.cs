@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 
 /// <summary>
@@ -368,5 +369,36 @@ public static class Tools
             return (leftPart, rightPart);
         }
         return (null, null);
+    }
+    public static HashSet<string> GetEraGamesDirectories(string[] directories)
+    {
+        var eraGamesDir = new HashSet<string>();
+        foreach (var directory in directories)
+        {
+            var dirs = GetEraGamesDirectories(directory);
+            foreach (var dir in dirs)
+            {
+                eraGamesDir.Add(dir);
+            }
+        }
+        return eraGamesDir;
+    }
+    public static HashSet<string> GetEraGamesDirectories(string rootPath)
+    {
+        var currentDir = new DirectoryInfo(rootPath);
+        var eraGames   = new HashSet<string>();
+        var allDirs    = currentDir.GetDirectories("*", SearchOption.AllDirectories);
+        foreach (var dir in allDirs)
+        {
+            var name = dir.Name;
+            if (!name.Equals("erb", StringComparison.OrdinalIgnoreCase) && !name.Equals("csv", StringComparison.OrdinalIgnoreCase)) continue;
+            var parent = dir.Parent ;
+            if (parent is null)
+            {
+                continue;
+            }
+            eraGames.Add(parent.FullName);
+        }
+        return eraGames;
     }
 }

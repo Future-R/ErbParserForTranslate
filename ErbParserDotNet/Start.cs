@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Sharprompt;
+using UtfUnknown;
 using static ERBParser;
 
 public static class Start
@@ -102,12 +103,7 @@ public static class Start
 
     private static void ConvertToUtf8(string[] directories)
     {
-        var eraGameDirs = new List<string>();
-        foreach (var directory in directories)
-        {
-            var subDirs = Directory.GetDirectories(directory);
-            eraGameDirs.AddRange(from subDir in subDirs let erbDir = Path.Combine(subDir, "erb") where Directory.Exists(erbDir) select subDir);
-        }
+        var eraGameDirs = Tools.GetEraGamesDirectories(directories);
         if (eraGameDirs.Count == 0)
         {
             Console.WriteLine("未找到任何Era游戏目录！");
@@ -122,33 +118,34 @@ public static class Start
                                                                                                 file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
         Parallel.ForEach(files, filepath =>
         {
-            var file = new FileStream(filepath, FileMode.Open, FileAccess.Read);
-            var cdet = new Ude.CharsetDetector();
-            cdet.Feed(file);
-            cdet.DataEnd();
-            file.Close();
-            file.Dispose();
+            var cdet =CharsetDetector.DetectFromFile(filepath);
+            
+            var resultDetected  = cdet.Detected;
             var encoding = Encoding.Default;
-            if (cdet.Charset != null) {
+            if (resultDetected != null) {
                 bool 日本人可能会用的编码 = false;
-                switch (cdet.Charset)
+              
+                switch (resultDetected.EncodingName)
                 {
-                    case "Shift-JIS":
-                    case "ASCII":
-                    case "UTF-16LE":
-                    case "UTF-16BE":
+                    case "iso-2022-jp":
+                    case "shift-jis":
+                    case "euc-jp":
+                    case "ascii":
+                    case "utf-16le":
+                    case "utf-16be":
                         日本人可能会用的编码 = true;
                         break;
                     default:
                         日本人可能会用的编码 = false;
                         break;
                 }
-                string warn = cdet.Confidence < 0.666 && !日本人可能会用的编码 ? "【警告】" : string.Empty;
-                Console.WriteLine($"{warn}编码: {cdet.Charset}, 可信: {cdet.Confidence}, {Path.GetFileName(filepath)}");
-                encoding = 日本人可能会用的编码 ? Encoding.GetEncoding(cdet.Charset) : Encoding.GetEncoding("Shift-JIS");
+                string warn = resultDetected.Confidence < 0.666 && !日本人可能会用的编码 ? "【警告】" : string.Empty;
+                Console.WriteLine($"{warn}编码: {resultDetected.EncodingName}, 可信: {resultDetected.Confidence}, {Path.GetFileName(filepath)}");
+                encoding = 日本人可能会用的编码 ? resultDetected.Encoding : Encoding.GetEncoding("Shift-JIS");
             }
              
             if (Equals(encoding, Encoding.UTF8) || Equals(encoding,Encoding.Default)) return;
+            
             var content = File.ReadAllText(filepath, encoding);
             File.WriteAllText(filepath, content, Encoding.UTF8);
         });
