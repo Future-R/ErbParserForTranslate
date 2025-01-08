@@ -45,7 +45,7 @@ public static class Start
 [ 5] - 将MTool机翻导入PT字典
 [ 6] - 查重，填充未翻译，警告不一致翻译
 [ 7] - Era传统字典转PT字典
-[ 8] - 将所有文件转换为UTF-8编码
+[ 8] - 将所有文件转换为UTF-8编码（试验功能！）
 [ 9] - 设置
 [10] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
@@ -130,9 +130,22 @@ public static class Start
             file.Dispose();
             var encoding = Encoding.Default;
             if (cdet.Charset != null) {
-                Console.WriteLine("Charset: {0}, confidence: {1}", 
-                    cdet.Charset, cdet.Confidence);
-                encoding = Encoding.GetEncoding(cdet.Charset);
+                bool 日本人可能会用的编码 = false;
+                switch (cdet.Charset)
+                {
+                    case "Shift-JIS":
+                    case "ASCII":
+                    case "UTF-16LE":
+                    case "UTF-16BE":
+                        日本人可能会用的编码 = true;
+                        break;
+                    default:
+                        日本人可能会用的编码 = false;
+                        break;
+                }
+                string warn = cdet.Confidence < 0.666 && !日本人可能会用的编码 ? "【警告】" : string.Empty;
+                Console.WriteLine($"{warn}编码: {cdet.Charset}, 可信: {cdet.Confidence}, {Path.GetFileName(filepath)}");
+                encoding = 日本人可能会用的编码 ? Encoding.GetEncoding(cdet.Charset) : Encoding.GetEncoding("Shift-JIS");
             }
              
             if (Equals(encoding, Encoding.UTF8) || Equals(encoding,Encoding.Default)) return;
@@ -259,6 +272,7 @@ public static class Start
             // pt的json都是[起头的
             if (!jsonContent.StartsWith("["))
             {
+                Console.WriteLine("【警告】可能错将Mtool字典当成PT字典导入！");
                 break;
             }
             JArray jsonArray = JArray.Parse(jsonContent);
