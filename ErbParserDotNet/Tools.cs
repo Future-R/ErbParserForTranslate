@@ -177,6 +177,20 @@ public static class Tools
         return result;
     }
 
+
+    public static string RemoveSkippedText(string input)
+    {
+        int startIndex = input.IndexOf("[SKIPSTART]");
+        int endIndex = input.IndexOf("[SKIPEND]");
+        if (startIndex == -1 || endIndex == -1)
+        {
+            return input;
+        }
+        string before = input.Substring(0, startIndex);
+        string after = input.Substring(endIndex + "[SKIPEND]".Length);
+        return before + after;
+    }
+
     /// <summary>
     /// 以非常谨慎的方式进行替换，效率比较低，但是很安全
     /// <br>单个文件中，已经被翻译过的部分会被标记，不再进行二次翻译</br>

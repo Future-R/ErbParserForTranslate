@@ -51,7 +51,8 @@ public class ERBParser
             {
                 content = File.ReadAllText(Path.ChangeExtension(filePath, "ERH"), Configs.fileEncoding) + "\n" + content;
             }
-            lineList = content.Replace(Environment.NewLine, "\n").Split(new[] { "\n" }, StringSplitOptions.None).ToList();
+            // 这里处理了[SKIPSTART]～[SKIPEND]
+            lineList = Tools.RemoveSkippedText(content.Replace(Environment.NewLine, "\n")).Split(new[] { "\n" }, StringSplitOptions.None).ToList();
             // 处理花括号合并多行代码
             lineList = mergeLines(lineList);
         }
@@ -527,7 +528,7 @@ public class ERBParser
                         var (left, right) = Tools.GetSlashStringCouple(lineString, '=');
                         if (right.Contains('"'))
                         {
-                            varNameList.Add(left.Trim(), contexts);
+                            varNameList.Add(left.Remove(left.Length - 1).Trim(), contexts);
                             textList.Add(right, contexts);
                             continue;
                         }
