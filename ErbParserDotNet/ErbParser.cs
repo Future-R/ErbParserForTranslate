@@ -142,10 +142,10 @@ public class ERBParser
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
 
-                // 如果逗号的下标小于第一个左括号，则说明是CALL Func(Pram)形式，否则是CALL Func, Pram形式
+                // 如果逗号的下标小于第一个左括号，则说明是CALL Func, Pram形式，否则是CALL Func(Pram)形式
                 int cmIndex = rightValue.IndexOf(",");
                 int lfIndex = rightValue.IndexOf("(");
-                if (cmIndex < lfIndex)
+                if (cmIndex > lfIndex)
                 {
                     string functionName = rightValue.Substring(0, lfIndex);
                     rightValue = rightValue.Substring(lfIndex).TrimEnd(')');
