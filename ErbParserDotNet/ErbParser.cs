@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 public class ERBParser
 {
@@ -452,6 +453,13 @@ public class ERBParser
                     continue;
                 }
                 string rightValue = lineString.Substring(spIndex).TrimStart();
+                textList.Add(rightValue, contexts);
+            }
+            // THROW报错文本
+            else if (lineString.StartsWith("THROW"))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).Trim();
                 textList.Add(rightValue, contexts);
             }
             // 改变颜色，右值一般是变量或者R,G,B，直接扔去做表达式解析
