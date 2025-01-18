@@ -987,7 +987,7 @@ public static class Start
                     // 合并变量名和长文本
                     var tuple = parser.GetListTuple();
                     List<(string, string)> varNameList = parser.VarNameListFilter(tuple.name.lines);
-                    List<(string, string)> textList = parser.TextListFilter(tuple.text.lines);
+                    List<(string, string)> textList = parser.TextListFilter(tuple.text.lines).ToList();
 
                     List<JObject> PTJsonObjList = new List<JObject>();
                     // 处理变量名

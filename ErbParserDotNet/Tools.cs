@@ -45,6 +45,11 @@ public static class Tools
     public static Regex englishTextCatch;
 
     /// <summary>
+    /// 匹配完全没有双字节的字符串
+    /// </summary>
+    public static Regex haventDoubleByte;
+
+    /// <summary>
     /// 全局变量，似乎暂时用不到
     /// </summary>
     private static readonly string[] OriginVarName = new[]
@@ -88,6 +93,8 @@ public static class Tools
         resultsCatch = new Regex(@"(?<=RESULTS:?.* = ).+", RegexOptions.Compiled);
 
         englishTextCatch = new Regex(@"^[a-zA-Z0-9_.%\(\),+\-\*\\ \[\]{}'""]+$", RegexOptions.Compiled);
+
+        haventDoubleByte = new Regex(@"^[\x00-\xff]+$", RegexOptions.Compiled);
     }
 
     /// <summary>

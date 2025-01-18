@@ -181,13 +181,14 @@ public class ERBParser
                         string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                         foreach (var item in parts)
                         {
-                            if (item.Contains('"'))
+                            string str = item.Trim();
+                            if (str.Contains('"'))
                             {
-                                textList.Add(item, contexts);
+                                textList.Add(str, contexts);
                             }
                             else
                             {
-                                var (vari, text) = ExpressionParser.Slash(item);
+                                var (vari, text) = ExpressionParser.Slash(str);
                                 varNameList.AddRange(vari, contexts);
                                 textList.AddRange(text, contexts);
                             }
@@ -529,7 +530,7 @@ public class ERBParser
                         if (right.Contains('"'))
                         {
                             varNameList.Add(left.Remove(left.Length - 1).Trim(), contexts);
-                            textList.Add(right, contexts);
+                            textList.Add(right.Trim(), contexts);
                             continue;
                         }
                     }
@@ -620,14 +621,18 @@ public class ERBParser
             .ToList();
     }
 
-    // 合并重复成员，过滤纯英文和纯数字
+    // 合并重复成员，过滤无双字节的字符串
     // 是否需要剔除当前文件的变量名，待观察
-    public List<(string, string)> TextListFilter(List<(string, string)> originalList)
+    public IEnumerable<(string, string)> TextListFilter(List<(string, string)> originalList)
     {
         // 过滤掉空字符串和数组
         var filteredList = originalList
-            .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
-            .ToList();
+            .Where(token => !string.IsNullOrWhiteSpace(token.Item1.Trim()) && !Tools.IsArray(token.Item1));
+
+        if (Configs.hideEngText)
+        {
+            filteredList = filteredList.Where(token => Tools.haventDoubleByte.IsMatch(token.Item1));
+        }
 
         // 合并相同词条
         var tupleList = Configs.mergeSameText
@@ -765,7 +770,7 @@ public class ERBParser
             var originObjs = type == "文本" ? TextListFilter(originalList.lines) : VarNameListFilter(originalList.lines);
             var referenceObjs = type == "文本" ? TextListFilter(referenceList.lines) : VarNameListFilter(referenceList.lines);
             // 二次检查
-            if (originObjs.Count == referenceObjs.Count)
+            if (originObjs.Count() == referenceObjs.Count())
             {
                 int index = 0;
                 foreach (var (origin, reference) in originObjs.Zip(referenceObjs, (o, r) => (o, r)))
