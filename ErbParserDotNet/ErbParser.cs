@@ -146,7 +146,7 @@ public class ERBParser
                 // 如果逗号的下标小于第一个左括号，则说明是CALL Func, Pram形式，否则是CALL Func(Pram)形式
                 int cmIndex = rightValue.IndexOf(",");
                 int lfIndex = rightValue.IndexOf("(");
-                if (cmIndex > lfIndex)
+                if (lfIndex > -1 && cmIndex > lfIndex)
                 {
                     string functionName = rightValue.Substring(0, lfIndex);
                     rightValue = rightValue.Substring(lfIndex).TrimEnd(')');
@@ -639,7 +639,7 @@ public class ERBParser
 
         if (Configs.hideEngText)
         {
-            filteredList = filteredList.Where(token => Tools.haventDoubleByte.IsMatch(token.Item1));
+            filteredList = filteredList.Where(token => !Tools.haventDoubleByte.IsMatch(token.Item1));
         }
 
         // 合并相同词条
