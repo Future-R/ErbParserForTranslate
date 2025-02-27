@@ -332,8 +332,8 @@ public static class Tools
             .OrderByDescending(obj => obj["original"].ToString().Length);
         foreach (var dictObj in dictObjs)
         {
-            string key = dictObj["original"].ToString().Replace("\r\n", "\n").Replace("\r", "\n").Replace("\\n", "\n").Replace("\n\n", "\n");
-            string value = dictObj["translation"].ToString();
+            string key = dictObj["original"].ToString().Replace("\r\n", "\n").Replace("\r", "\n").Replace("\\n", "\n").Replace("\n\n", "\n").Replace("<Tab>", "\t");
+            string value = dictObj["translation"].ToString().Replace("\r\n", "\n").Replace("\r", "\n").Replace("\\n", "\n").Replace("\n\n", "\n").Replace("<Tab>", "\t");
 
             if (!replacements.ContainsKey(key))
             {
