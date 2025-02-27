@@ -69,7 +69,7 @@ public static class Configs
             },
                 变量自动修正参考文件 = new string[]
             {
-                "Abl", "Base", "CFlag", "CSTR", "Ex",
+                "Abl", "Base", "CFlag", "CSTR", "Equip", "Ex",
                 "Exp", "Flag", "Global", "Item", "Juel",
                 "Mark", "Nowex", "Palam", "Source", "Stain",
                 "Talent", "TCVAR", "TEquip", "Tflag", "Train",
