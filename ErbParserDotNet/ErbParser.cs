@@ -456,7 +456,7 @@ public class ERBParser
                 textList.Add(rightValue, contexts);
             }
             // THROW报错文本
-            else if (lineString.StartsWith("THROW"))
+            else if (lineString.StartsWith("THROW "))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
@@ -610,6 +610,7 @@ public class ERBParser
     {
         // 过滤掉空字符串和数组
         var filteredList = originalList
+            .Select(x => (Tools.TrimEndTabs(x.Item1), x.Item2))
             .Where(token => !string.IsNullOrWhiteSpace(token.Item1) && !Tools.IsArray(token.Item1))
             .ToList();
 
@@ -635,6 +636,7 @@ public class ERBParser
     {
         // 过滤掉空字符串和数组
         var filteredList = originalList
+            .Select(x => (Tools.TrimEndTabs(x.Item1), x.Item2))
             .Where(token => !string.IsNullOrWhiteSpace(token.Item1.Trim()) && !Tools.IsArray(token.Item1));
 
         if (Configs.hideEngText)

@@ -422,4 +422,16 @@ public static class Tools
         }
         return eraGames;
     }
+
+    // 削除结尾的<Tab>
+    // 忽然觉得转义Tab是个坏主意，根本没必要保证译文的代码结构和原文一样呀
+    public static string TrimEndTabs(string input)
+    {
+        const string tabLiteral = "<Tab>";
+        while (input.EndsWith(tabLiteral))
+        {
+            input = input.Substring(0, input.Length - tabLiteral.Length);
+        }
+        return input;
+    }
 }

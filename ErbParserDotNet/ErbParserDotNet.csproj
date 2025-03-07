@@ -136,6 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AhoCorasick.cs" />
+    <Compile Include="XMLParser.cs" />
     <Compile Include="ResParser.cs" />
     <Compile Include="CsvParser.cs" />
     <Compile Include="Configs.cs" />

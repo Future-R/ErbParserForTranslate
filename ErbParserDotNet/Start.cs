@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Sharprompt;
 using UtfUnknown;
 using static ERBParser;
+using static System.Net.Mime.MediaTypeNames;
 
 public static class Start
 {
@@ -569,9 +570,10 @@ public static class Start
         Parallel.ForEach(Directory.GetFiles(transFileDirectory, "*.json", SearchOption.AllDirectories), (jsonFile) =>
         {
             // 获取相对路径
-            var relativePath = Tools.GetrelativePath(jsonFile, transFileDirectory);
-            bool isCSV = relativePath.StartsWith("CSV");
+            var relativePath = Tools.GetrelativePath(jsonFile, transFileDirectory).ToLower();
+            bool isCSV = relativePath.StartsWith("csv");
             bool isIMG = relativePath.StartsWith("resources");
+            bool isXML = relativePath.EndsWith(".xml.json");
             bool fileExist = false;
             // 得到输出路径
             var targetPath = Path.Combine(gameDirectory, relativePath);
@@ -579,16 +581,31 @@ public static class Start
             // 考虑到有erb、erh同名的情况
             List<string> targetFiles = new List<string>();
 
-            // 遍历所有可能的扩展，后悔之前多手把扩展截掉了，现在想改稍微有点麻烦
-            foreach (var ext in Configs.extensions)
+            
+            // 专门处理FL的XML文件
+            if (isXML)
             {
-                string newFile = Path.ChangeExtension(targetPath, ext);
+                string newFile = targetPath.Remove(targetPath.Length - 4);
                 if (File.Exists(newFile))
                 {
                     targetFiles.Add(newFile);
                     fileExist = true;
                 }
             }
+            else
+            {
+                // 遍历所有可能的扩展，后悔之前多手把扩展截掉了，现在想改稍微有点麻烦
+                foreach (var ext in Configs.extensions)
+                {
+                    string newFile = Path.ChangeExtension(targetPath, ext);
+                    if (File.Exists(newFile))
+                    {
+                        targetFiles.Add(newFile);
+                        fileExist = true;
+                    }
+                }
+            }
+            
             // 如果目标脚本不存在，跳过这一条并报错
             if (!fileExist)
             {
@@ -598,6 +615,10 @@ public static class Start
                     {
                         Console.WriteLine($"【错误】：没找到{targetPath}.CSV！");
                     }
+                }
+                else if (isXML)
+                {
+                    Console.WriteLine($"【错误】：没找到{targetPath}的XML配置！");
                 }
                 else
                 {
@@ -678,6 +699,7 @@ public static class Start
         string csvDirectory = Path.Combine(path, "CSV");
         string erbDirectory = Path.Combine(path, "ERB");
         string resDirectory = Path.Combine(path, "resources");
+        string xmlDirectory = Path.Combine(path, "XML");
 
         Console.WriteLine("开始提取字典，根据CPU性能与磁盘读写速度这可能需要2秒~60秒，请稍候……");
 
@@ -812,6 +834,45 @@ public static class Start
                     if (File.Exists(referencePath))
                     {
                         RESParser referenceParser = new RESParser();
+                        referenceParser.ParseFile(referencePath);
+                        parser.WriteJson(targetFile, relativePath, referenceParser.GetList());
+                    }
+                    else
+                    {
+                        Console.WriteLine($"【警告】：未能找到{referencePath}！");
+                        parser.WriteJson(targetFile, relativePath);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
+        }
+        if (Directory.Exists(xmlDirectory))
+        {
+            // 获取所有xml文件
+            List<string> xmlNames = Directory.GetFiles(xmlDirectory, "*.xml", SearchOption.AllDirectories).ToList();
+            xmlNames.AddRange(Directory.GetFiles(erbDirectory, "*.xml", SearchOption.AllDirectories));
+
+            Parallel.ForEach(xmlNames, xmlName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(xmlName, path);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析XML
+                XMLParser parser = new XMLParser();
+                parser.ParseFile(xmlName);
+
+                // 输出Json
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                if (merge)
+                {
+                    var referencePath = Path.Combine(mergePath, relativePath);
+                    if (File.Exists(referencePath))
+                    {
+                        XMLParser referenceParser = new XMLParser();
                         referenceParser.ParseFile(referencePath);
                         parser.WriteJson(targetFile, relativePath, referenceParser.GetList());
                     }
