@@ -47,9 +47,10 @@ public static class Start
 [ 5] - 将MTool机翻导入PT字典
 [ 6] - 查重，填充未翻译，警告不一致翻译
 [ 7] - Era传统字典转PT字典
-[ 8] - 将所有文件转换为UTF-8编码（试验功能！）
-[ 9] - 设置
-[10] - 访问项目主页";
+[ 8] - 将所有文件转换为UTF-8编码
+[ 9] - 从单文件提取PT字典
+[10] - 设置
+[11] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -84,9 +85,12 @@ public static class Start
                     ConvertToUtf8(directories);
                     break;
                 case "9":
-                    Settings();
+                    SingleParser();
                     break;
                 case "10":
+                    Settings();
+                    break;
+                case "11":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -153,13 +157,57 @@ public static class Start
         Console.WriteLine("转换完成！");
         Console.ReadKey();
     }
-
     static void Settings()
     {
         Process.Start(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"));
         Console.WriteLine("请编辑打开的Config文件并保存，保存后才能生效。");
         Console.ReadKey();
         Configs.Init();
+    }
+
+    static void SingleParser()
+    {
+        string 文件 = Tools.ReadLine("请拖入需要提取字典的单个文件");
+        string menuString =
+@"请问该文件是什么类型：
+[0] - ERB或ERH脚本
+[1] - CSV目录下的CSV
+[2] - Resource目录下的CSV
+[3] - XML配置文件
+[4] - 果然还是算了，让我返回主菜单吧";
+        string command = Tools.ReadLine(menuString);
+        Timer.Start();
+        switch (command)
+        {
+            case "0":
+                ERBParser erbp = new ERBParser();
+                erbp.ParseFile(文件);
+                erbp.WriteJson(文件, "");
+                break;
+            case "1":
+                CSVParser csvp = new CSVParser();
+                csvp.ParseFile(文件);
+                csvp.WriteJson(文件, "");
+                break;
+            case "2":
+                RESParser resp = new RESParser();
+                resp.ParseFile(文件);
+                resp.WriteJson(文件, "");
+                break;
+            case "3":
+                XMLParser xmlp = new XMLParser();
+                xmlp.ParseFile(文件);
+                xmlp.WriteJson(文件, "");
+                break;
+            default:
+                return;
+        }
+        Console.WriteLine($"已将PT字典生成到相同目录");
+        Timer.Stop();
+        //if (Configs.autoOpenFolder)
+        //{
+        //    Process.Start(Path.GetPathRoot(文件));
+        //}
     }
 
     static void PT字典转Mtool字典()

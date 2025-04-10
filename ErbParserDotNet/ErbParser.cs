@@ -138,7 +138,7 @@ public class ERBParser
             // 还是要把call拆出来，因为call后面很可能有form，还是交给解析比较好
             // call有两种形式，一种是CALL 函数名, 参数1, 参数2，另一种是CALL 函数名(参数1,参数2)
             // 之前的做法只考虑了第一种形式，现在要考虑第二种形式
-            else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("JUMP "))
+            else if (lineString.StartsWith("CALL") || lineString.StartsWith("TRYCALL") || lineString.StartsWith("TRYCCALL") || lineString.StartsWith("JUMP "))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
