@@ -187,15 +187,55 @@ public static class Tools
 
     public static string RemoveSkippedText(string input)
     {
-        int startIndex = input.IndexOf("[SKIPSTART]");
-        int endIndex = input.IndexOf("[SKIPEND]");
-        if (startIndex == -1 || endIndex == -1)
+        var result = new StringBuilder();
+        int currentIndex = 0;
+
+        while (currentIndex < input.Length)
         {
-            return input;
+            int startIndex = input.IndexOf("[SKIPSTART]", currentIndex);
+            if (startIndex == -1)
+            {
+                result.Append(input.Substring(currentIndex));
+                break;
+            }
+
+            // 检测[SKIPSTART]所在行是否被注释
+            if (IsLineCommented(input, startIndex))
+            {
+                currentIndex = startIndex + "[SKIPSTART]".Length;
+                continue;
+            }
+
+            int endIndex = input.IndexOf("[SKIPEND]", startIndex);
+            if (endIndex == -1)
+            {
+                result.Append(input.Substring(currentIndex));
+                break;
+            }
+
+            // 追加未被跳过的内容
+            result.Append(input, currentIndex, startIndex - currentIndex);
+            currentIndex = endIndex + "[SKIPEND]".Length;
         }
-        string before = input.Substring(0, startIndex);
-        string after = input.Substring(endIndex + "[SKIPEND]".Length);
-        return before + after;
+        return result.ToString();
+    }
+
+    private static bool IsLineCommented(string input, int position)
+    {
+        // 查找行首位置
+        int lineStart = input.LastIndexOf('\n', position) + 1;
+        if (lineStart < 0) lineStart = 0;
+
+        // 跳过行首空格/制表符后检查分号
+        for (int i = lineStart; i <= position; i++)
+        {
+            if (i >= input.Length) return false;
+            if (input[i] == ';' && (i == lineStart || char.IsWhiteSpace(input[i - 1])))
+                return true;
+            if (!char.IsWhiteSpace(input[i]))
+                break;
+        }
+        return false;
     }
 
     /// <summary>
@@ -407,13 +447,13 @@ public static class Tools
     public static HashSet<string> GetEraGamesDirectories(string rootPath)
     {
         var currentDir = new DirectoryInfo(rootPath);
-        var eraGames   = new HashSet<string>();
-        var allDirs    = currentDir.GetDirectories("*", SearchOption.AllDirectories);
+        var eraGames = new HashSet<string>();
+        var allDirs = currentDir.GetDirectories("*", SearchOption.AllDirectories);
         foreach (var dir in allDirs)
         {
             var name = dir.Name;
             if (!name.Equals("erb", StringComparison.OrdinalIgnoreCase) && !name.Equals("csv", StringComparison.OrdinalIgnoreCase)) continue;
-            var parent = dir.Parent ;
+            var parent = dir.Parent;
             if (parent is null)
             {
                 continue;
