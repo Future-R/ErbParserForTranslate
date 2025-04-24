@@ -445,7 +445,7 @@ public class ERBParser
                 continue;
             }
             // 其它PRINT系，右值丢给译者
-            else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATAFORM") || lineString.StartsWith("REUSELASTLINE"))
+            else if (lineString.StartsWith("PRINT") || lineString.StartsWith("DATA") || lineString.StartsWith("REUSELASTLINE"))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 if (spIndex == -1)
