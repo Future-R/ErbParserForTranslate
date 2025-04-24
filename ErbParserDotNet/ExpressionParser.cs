@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 // 解析写麻了，干脆之后弄个第三方解析库算了
 // 先暴力处理括号，如果括号左边是英文，就当它是函数名，把这个token删掉
@@ -96,6 +97,22 @@ class ExpressionParser
 
 
             lastChar = expression[i];
+        }
+        // 循环结束后处理最后的 temp 内容
+        if (temp != "")
+        {
+            //if (temp.Last() != expression.Last())
+            //{
+            //    temp += expression.Last();
+            //}
+            if (Char.IsLetter(temp[0]))
+            {
+                variables.Add(temp);
+            }
+            else
+            {
+                constants.Add(temp);
+            }
         }
         return (vari: variables, text: constants);
     }
