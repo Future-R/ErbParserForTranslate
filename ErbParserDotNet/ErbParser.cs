@@ -149,6 +149,7 @@ public class ERBParser
                 if (lfIndex > -1 && cmIndex > lfIndex)
                 {
                     string functionName = rightValue.Substring(0, lfIndex);
+                    varNameList.Add(functionName, contexts);
                     rightValue = rightValue.Substring(lfIndex).TrimEnd(')');
                     if (Configs.mergeString)
                     {
@@ -263,7 +264,7 @@ public class ERBParser
                     string rightValue = lineString.Substring(eqIndex + 1).Trim();
 
                     var leftEnumer = leftValue.Split(' ')
-                        .Where(arg => !string.IsNullOrWhiteSpace(arg));
+                        .Where(arg => !string.IsNullOrWhiteSpace(arg) && arg != "<Tab>");
                     varNameList.Add(leftEnumer.LastOrDefault(), contexts);
 
                     // 类型推导，如果是数值型，那么右值不用翻译，continue掉
