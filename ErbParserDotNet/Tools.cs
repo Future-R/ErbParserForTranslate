@@ -185,57 +185,112 @@ public static class Tools
     }
 
 
+    /// <summary>
+    /// 移除代码字符串中 [SKIPSTART] 和 [SKIPEND] 之间（包括这两个标记）的内容。
+    /// 如果 [SKIPSTART] 或 [SKIPEND] 标记所在行被分号注释，则不处理。
+    /// </summary>
+    /// <param name="input">输入的代码字符串。</param>
+    /// <returns>处理后的代码字符串。</returns>
     public static string RemoveSkippedText(string input)
     {
+        // 使用 StringBuilder 来高效地构建结果字符串
         var result = new StringBuilder();
+        // 当前处理的字符串索引
         int currentIndex = 0;
+        // 标记是否处于跳过模式
+        bool inSkipMode = false;
+
+        // 编译正则表达式以提高性能，用于匹配行首的分号和可选的空白符
+        // ^\s*; 表示行首（^）可能有零个或多个空白符（\s*），然后是分号（;）
+        var commentedLineRegex = new Regex(@"^\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
         while (currentIndex < input.Length)
         {
+            // 查找下一个 [SKIPSTART] 或 [SKIPEND] 标记
             int startIndex = input.IndexOf("[SKIPSTART]", currentIndex);
-            if (startIndex == -1)
-            {
-                result.Append(input.Substring(currentIndex));
-                break;
-            }
+            int endIndex = input.IndexOf("[SKIPEND]", currentIndex);
 
-            // 检测[SKIPSTART]所在行是否被注释
-            if (IsLineCommented(input, startIndex))
+            // 如果当前处于跳过模式，我们只关心 [SKIPEND]
+            if (inSkipMode)
             {
-                currentIndex = startIndex + "[SKIPSTART]".Length;
-                continue;
-            }
+                // 如果没有找到 [SKIPEND]，则跳过剩余所有内容
+                if (endIndex == -1)
+                {
+                    break;
+                }
 
-            int endIndex = input.IndexOf("[SKIPEND]", startIndex);
-            if (endIndex == -1)
+                // 检查 [SKIPEND] 所在行是否被注释
+                if (!IsLineCommented(input, endIndex, commentedLineRegex))
+                {
+                    // 如果 [SKIPEND] 没有被注释，则退出跳过模式
+                    inSkipMode = false;
+                    currentIndex = endIndex + "[SKIPEND]".Length;
+                }
+                else
+                {
+                    // 如果 [SKIPEND] 被注释了，则继续从 [SKIPEND] 之后寻找下一个 [SKIPEND]
+                    currentIndex = endIndex + "[SKIPEND]".Length;
+                }
+                continue; // 继续下一次循环
+            }
+            // 如果当前不在跳过模式，我们只关心 [SKIPSTART]
+            else
             {
-                result.Append(input.Substring(currentIndex));
-                break;
-            }
+                // 如果没有找到 [SKIPSTART]，则将剩余部分添加到结果中并退出
+                if (startIndex == -1)
+                {
+                    result.Append(input.Substring(currentIndex));
+                    break;
+                }
 
-            // 追加未被跳过的内容
-            result.Append(input, currentIndex, startIndex - currentIndex);
-            currentIndex = endIndex + "[SKIPEND]".Length;
+                // 检查 [SKIPSTART] 所在行是否被注释
+                if (!IsLineCommented(input, startIndex, commentedLineRegex))
+                {
+                    // 如果 [SKIPSTART] 没有被注释，则进入跳过模式
+                    inSkipMode = true;
+                    // 将 [SKIPSTART] 之前的内容添加到结果中
+                    result.Append(input, currentIndex, startIndex - currentIndex);
+                    currentIndex = startIndex + "[SKIPSTART]".Length;
+                }
+                else
+                {
+                    // 如果 [SKIPSTART] 被注释了，则将 [SKIPSTART] 之前的内容和 [SKIPSTART] 本身添加到结果中
+                    result.Append(input, currentIndex, "[SKIPSTART]".Length + (startIndex - currentIndex));
+                    currentIndex = startIndex + "[SKIPSTART]".Length;
+                }
+            }
         }
         return result.ToString();
     }
 
-    private static bool IsLineCommented(string input, int position)
+    /// <summary>
+    /// 判断指定位置的标记是否在被分号注释的行中。
+    /// </summary>
+    /// <param name="input">输入的代码字符串。</param>
+    /// <param name="position">标记的起始位置。</param>
+    /// <param name="commentedLineRegex">用于检查行是否被注释的正则表达式。</param>
+    /// <returns>如果行被注释，则返回 true；否则返回 false。</returns>
+    private static bool IsLineCommented(string input, int position, Regex commentedLineRegex)
     {
-        // 查找行首位置
+        // 查找当前标记所在行的起始位置
         int lineStart = input.LastIndexOf('\n', position) + 1;
-        if (lineStart < 0) lineStart = 0;
-
-        // 跳过行首空格/制表符后检查分号
-        for (int i = lineStart; i <= position; i++)
+        if (lineStart < 0)
         {
-            if (i >= input.Length) return false;
-            if (input[i] == ';' && (i == lineStart || char.IsWhiteSpace(input[i - 1])))
-                return true;
-            if (!char.IsWhiteSpace(input[i]))
-                break;
+            lineStart = 0; // 如果没有换行符，则从字符串开头开始
         }
-        return false;
+
+        // 查找当前标记所在行的结束位置
+        int lineEnd = input.IndexOf('\n', position);
+        if (lineEnd == -1)
+        {
+            lineEnd = input.Length; // 如果没有换行符，则到字符串末尾
+        }
+
+        // 提取当前行内容
+        string line = input.Substring(lineStart, lineEnd - lineStart);
+
+        // 使用正则表达式检查行是否被分号注释
+        return commentedLineRegex.IsMatch(line);
     }
 
     /// <summary>
