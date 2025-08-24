@@ -317,6 +317,18 @@ public class ERBParser
                     textList.AddRange(text, contexts);
                 }
             }
+            // 位操作函数 SETBIT, CLEARBIT, INVERTBIT
+            else if (lineString.StartsWith("GETBIT ") || lineString.StartsWith("SETBIT ") || lineString.StartsWith("CLEARBIT ") || lineString.StartsWith("INVERTBIT "))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).Trim();
+
+                var enumer = rightValue.Split(',')
+                                .Where(arg => !string.IsNullOrWhiteSpace(arg))
+                                .Select(arg => arg.Trim());
+
+                varNameList.AddRange(enumer, contexts);
+            }
             // .NET版新增了SQL语句
             else if (lineString.StartsWith("SQL_EXECUTE"))
             {
