@@ -54,7 +54,7 @@ public static class Configs
                 合并同一文件的相同词条 = false,
                 屏蔽变量输出 = false,
                 合并联立字符串 = true,
-                读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh" },
+                读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh", ".erd" },
                 允许构成变量名的字符 = new string[] { "☆", "♡", "∀", "←", "→" },
                 需要处理的操作符 = new string[]
             {

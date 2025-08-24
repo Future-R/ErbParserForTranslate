@@ -12,6 +12,7 @@ using Sharprompt;
 using UtfUnknown;
 using static ERBParser;
 using static System.Net.Mime.MediaTypeNames;
+using ErbParserDotNet;
 
 public static class Start
 {
@@ -521,7 +522,8 @@ public static class Start
         foreach (string 文件 in 游戏目录下所有文件)
         {
             if (文件.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
-                文件.EndsWith(".erh", StringComparison.OrdinalIgnoreCase))
+                文件.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) ||
+                文件.EndsWith(".erd", StringComparison.OrdinalIgnoreCase))
             {
                 待汉化文件.Add(文件);
             }
@@ -862,6 +864,43 @@ public static class Start
                     parser.WriteJson(targetFile, relativePath);
                 }
             });
+
+            // 获取所有erd文件
+            var erdNames = Directory.GetFiles(erbDirectory, "*.ERD", SearchOption.AllDirectories);
+            if (erdNames.Length > 0) PZJson.输出ERD字典(erdNames);
+            Parallel.ForEach(erdNames, erdName =>
+            {
+                // 获取相对路径
+                var relativePath = Tools.GetrelativePath(erdName, path);
+                // 得到输出路径
+                var targetFile = Path.Combine(appPath, relativePath);
+                // 解析ERD
+                CSVParser parser = new CSVParser();
+                parser.ParseFile(erdName);
+
+                // 输出Json
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                if (merge)
+                {
+                    var referencePath = Path.Combine(mergePath, relativePath);
+                    if (File.Exists(referencePath))
+                    {
+                        CSVParser referenceParser = new CSVParser();
+                        referenceParser.ParseFile(referencePath);
+                        parser.WriteJson(targetFile, relativePath, referenceParser.GetList());
+                    }
+                    else
+                    {
+                        Console.WriteLine($"【警告】：未能找到{referencePath}！");
+                        parser.WriteJson(targetFile, relativePath);
+                    }
+                }
+                else
+                {
+                    parser.WriteJson(targetFile, relativePath);
+                }
+            });
+
         }
         else
         {
