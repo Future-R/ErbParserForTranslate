@@ -13,6 +13,7 @@ using UtfUnknown;
 using static ERBParser;
 using static System.Net.Mime.MediaTypeNames;
 using ErbParserDotNet;
+using System.Threading;
 
 public static class Start
 {
@@ -50,8 +51,9 @@ public static class Start
 [ 7] - Era传统字典转PT字典
 [ 8] - 将所有文件转换为UTF-8编码
 [ 9] - 从单文件提取PT字典
-[10] - 设置
-[11] - 访问项目主页";
+[10] - 获取字典差异（方便上传Paratranz）
+[11] - 设置
+[12] - 访问项目主页";
             string command = Tools.ReadLine(menuString);
             switch (command)
             {
@@ -89,9 +91,12 @@ public static class Start
                     SingleParser();
                     break;
                 case "10":
-                    Settings();
+                    ExtractModifiedFiles();
                     break;
                 case "11":
+                    Settings();
+                    break;
+                case "12":
                     Process.Start("https://github.com/Future-R/ErbParserForTranslate");
                     break;
                 case "999":
@@ -1305,5 +1310,125 @@ public static class Start
             Process.Start(appPath);
         }
     }
+
+    /// <summary>
+    /// 对比新旧两个目录，提取所有新增或内容被修改的文件到新目录。
+    /// </summary>
+    static void ExtractModifiedFiles()
+    {
+        // 1. 获取用户输入的目录路径
+        string oldPath = Tools.ReadLine("请拖入原字典目录:");
+        string newPath = Tools.ReadLine("请拖入新字典目录:");
+        string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Extracted_Files_C");
+
+        if (!Directory.Exists(oldPath) || !Directory.Exists(newPath))
+        {
+            Console.WriteLine("【错误】输入的一个或多个目录不存在，操作已取消。");
+            return;
+        }
+
+        // 2. 准备输出目录
+        Console.WriteLine($"文件将被提取到: {outputPath}");
+        if (Directory.Exists(outputPath))
+        {
+            Console.WriteLine("警告：输出目录已存在，将先被清空。");
+            Tools.CleanDirectory(outputPath);
+        }
+        Directory.CreateDirectory(outputPath);
+
+        Console.WriteLine("正在开始对比文件，请稍候...");
+        Timer.Start();
+
+        // 3. 获取新目录中的所有文件
+        var newFiles = Directory.GetFiles(newPath, "*.*", SearchOption.AllDirectories);
+        int copiedFilesCount = 0;
+        int processedFilesCount = 0;
+
+        // 4. 并行遍历和对比文件
+        Parallel.ForEach(newFiles, (newFile) =>
+        {
+            var relativePath = Tools.GetrelativePath(newFile, newPath);
+            var oldFile = Path.Combine(oldPath, relativePath);
+            var destFile = Path.Combine(outputPath, relativePath);
+
+            bool shouldCopy = false;
+            string reason = "";
+
+            if (!File.Exists(oldFile))
+            {
+                shouldCopy = true;
+                reason = "[新增]";
+            }
+            else
+            {
+                // 通过比较文件内容来判断是否被修改
+                if (!AreFilesEqual(newFile, oldFile))
+                {
+                    shouldCopy = true;
+                    reason = "[修改]";
+                }
+            }
+
+            if (shouldCopy)
+            {
+                // 确保目标子目录存在
+                Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+                // 复制文件
+                File.Copy(newFile, destFile, true);
+                Console.WriteLine($"{reason} {relativePath}");
+                // 使用 Interlocked.Increment 来确保多线程计数的安全
+                Interlocked.Increment(ref copiedFilesCount);
+            }
+            Interlocked.Increment(ref processedFilesCount);
+        });
+
+        Timer.Stop();
+        Console.WriteLine($"\n对比完成！共处理 {processedFilesCount} 个文件，提取了 {copiedFilesCount} 个新增或修改的文件到目录 C。");
+
+        // 5. 如果配置允许，自动打开输出文件夹
+        if (Configs.autoOpenFolder)
+        {
+            Process.Start(outputPath);
+        }
+    }
+
+    /// <summary>
+    /// 高效地比较两个文件的内容是否完全相同。
+    /// </summary>
+    /// <param name="path1">第一个文件的路径。</param>
+    /// <param name="path2">第二个文件的路径。</param>
+    /// <returns>如果文件内容相同则返回 true，否则返回 false。</returns>
+    private static bool AreFilesEqual(string path1, string path2)
+    {
+        try
+        {
+            // 不预先检查文件大小，因为换行符不同会导致大小不同
+            byte[] bytes1 = File.ReadAllBytes(path1);
+            byte[] bytes2 = File.ReadAllBytes(path2);
+
+            // 优化：如果文件在字节层面完全一样，则直接返回 true，这是最快的情况。
+            if (bytes1.SequenceEqual(bytes2))
+            {
+                return true;
+            }
+
+            // 规范化处理：通过移除所有回车符（Carriage Return, CR, 0x0D, '\r'）的字节
+            // 来实现对不同换行符的兼容。这会将 Windows 的 CRLF (`\r\n`) 和
+            // Unix 的 LF (`\n`) 都视为相同的换行。
+            // 使用 LINQ 的 Where 操作可以高效地创建一个不包含 CR 字节的新序列。
+            var normalizedBytes1 = bytes1.Where(b => b != 0x0D);
+            var normalizedBytes2 = bytes2.Where(b => b != 0x0D);
+
+            // 比较规范化后的字节序列。
+            return normalizedBytes1.SequenceEqual(normalizedBytes2);
+        }
+        catch (IOException ex)
+        {
+            // 处理文件可能被占用等IO异常
+            Console.WriteLine($"【IO错误】无法对比文件: {ex.Message}");
+            return false; // 如果无法比较，则默认它们不同，以便提取出来供用户检查。
+        }
+    }
+
 }
 
