@@ -307,7 +307,15 @@ public static class Start
             {
                 JObject jobj = JObject.Parse(json输入);
                 // 兼容末尾的_translated.
-                机翻字典.Add(文件名.Replace("_translated.", "."), jobj);
+                string 替换后文件名 = 文件名.Replace("_translated.", ".");
+                if (机翻字典.ContainsKey(替换后文件名))
+                {
+                    Console.WriteLine($"{替换后文件名}已存在，无法再次录入");
+                }
+                else
+                {
+                    机翻字典.Add(替换后文件名, jobj);
+                }
             }
         }
 

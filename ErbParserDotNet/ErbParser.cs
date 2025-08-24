@@ -100,7 +100,11 @@ public class ERBParser
             {
                 contexts.Add(lineList[i + 1]);
             }
-
+            // TRYCALLLIST
+            if (lineString.StartsWith("TRYCALLLIST") || lineString.StartsWith("ENDFUNC"))
+            {
+                continue;
+            }
             // 匹配函数
             // 只匹配了声明用的@
             if (lineString.StartsWith("@"))
@@ -128,6 +132,14 @@ public class ERBParser
                         }
                     }
                 }
+            }
+            // TRYCALLLIST函数
+            else if (lineString.StartsWith("FUNC "))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).Trim();
+                varNameList.Add(rightValue, contexts);
+
             }
             else if (lineString.StartsWith("#DEFINE"))
             {
