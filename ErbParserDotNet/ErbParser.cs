@@ -105,6 +105,7 @@ public class ERBParser
             {
                 continue;
             }
+            // ==========================开头匹配==========================
             // 匹配函数
             // 只匹配了声明用的@
             if (lineString.StartsWith("@"))
@@ -522,7 +523,74 @@ public class ERBParser
                 string rightValue = lineString.Substring(spIndex).TrimStart();
                 textList.Add(rightValue, contexts);
             }
-            // 末尾匹配
+            // DataTable相关函数
+            else if (lineString.StartsWith("DT_ROW_ADD") ||
+                     lineString.StartsWith("DT_ROW_SET") ||
+                     lineString.StartsWith("DT_ROW_REMOVE") ||
+                     lineString.StartsWith("DT_ROW_LENGTH"))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                // 如果没有参数，则跳过
+                if (spIndex == -1) continue;
+
+                string rightValue = lineString.Substring(spIndex).TrimStart();
+
+                // 统一处理带括号的函数式调用，例如 DT_ROW_ADD("db", ...)
+                if (rightValue.StartsWith("(") && rightValue.EndsWith(")"))
+                {
+                    rightValue = rightValue.Substring(1, rightValue.Length - 2);
+                }
+
+                string[] parts = rightValue.Split(new[] { ',' });
+
+                if (parts.Length == 0) continue;
+
+                // 第一个参数总是 dataTableName，可能是字符串或变量，交由表达式解析
+                var (vari1, text1) = ExpressionParser.Slash(parts[0].Trim());
+                varNameList.AddRange(vari1, contexts);
+                textList.AddRange(text1, contexts);
+
+                if (lineString.Trim().StartsWith("DT_ROW_LENGTH"))
+                {
+                    // DT_ROW_LENGTH 只有一个参数，已经处理完毕
+                }
+                else if (lineString.Trim().StartsWith("DT_ROW_REMOVE"))
+                {
+                    // 后续参数是 idValue(s) 和 count，视为变量
+                    var rightParts = parts.Skip(1).Select(p => p.Trim()).Where(p => !string.IsNullOrEmpty(p));
+                    varNameList.AddRange(rightParts, contexts);
+                }
+                else if (lineString.Trim().StartsWith("DT_ROW_SET"))
+                {
+                    if (parts.Length > 1)
+                    {
+                        // 第二个参数是 idValue，视为变量
+                        varNameList.Add(parts[1].Trim(), contexts);
+
+                        // 后续参数是 (columnName, columnValue) 对或 (columnNames, columnValues, count)
+                        // 将它们全部交给表达式解析器处理是最稳妥的方式
+                        foreach (var item in parts.Skip(2))
+                        {
+                            var (vari, text) = ExpressionParser.Slash(item.Trim());
+                            varNameList.AddRange(vari, contexts);
+                            textList.AddRange(text, contexts);
+                        }
+                    }
+                }
+                else if (lineString.Trim().StartsWith("DT_ROW_ADD"))
+                {
+                    // 后续参数是 (columnName, columnValue) 对或 (columnNames, columnValues, count)
+                    // 同样全部交给表达式解析器处理
+                    foreach (var item in parts.Skip(1))
+                    {
+                        var (vari, text) = ExpressionParser.Slash(item.Trim());
+                        varNameList.AddRange(vari, contexts);
+                        textList.AddRange(text, contexts);
+                    }
+                }
+            }
+
+            // ==========================末尾匹配==========================
             // 变量自增自减少
             else if (lineString.EndsWith("++") || lineString.EndsWith("--"))
             {
