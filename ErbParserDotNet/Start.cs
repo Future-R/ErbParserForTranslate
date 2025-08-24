@@ -64,7 +64,7 @@ public static class Start
                     ReadFile(appPath);
                     break;
                 case "2":
-                    versionUpdate(appPath);
+                    VersionUpdate(appPath);
                     break;
                 case "3":
                     ReadFile(appPath, true);
@@ -997,6 +997,8 @@ public static class Start
         }
     }
 
+    #region VersionUpdate Refactored
+
     /// <summary>
     /// <b>更新版本</b>
     /// <br>需求是：</br>
@@ -1004,305 +1006,67 @@ public static class Start
     /// <br>2.新的键值不能重复（需要取旧版最大键值+1）</br>
     /// <br>3.新的条目最好顺序不要在最后，而是在正确的上下文之间</br>
     /// </summary>
-    static void versionUpdate(string appPath)
+    /// <param name="appPath">应用程序根目录，用于存放输出的字典文件。</param>
+    private static void VersionUpdate(string appPath)
     {
-        // 清理上次生成的文件，必须放前面不然删得慢了碰到后面的多线程会报错
+        // 1. 准备工作：清理输出目录
         Tools.CleanDirectory(Path.Combine(appPath, "CSV"));
         Tools.CleanDirectory(Path.Combine(appPath, "ERB"));
         Tools.CleanDirectory(Path.Combine(appPath, "resources"));
 
-        string oldPath = Tools.ReadLine("请拖入放置CSV和ERB目录的译文目录：");
-        string[] oldFileArray = Directory.GetFiles(oldPath, "*.json", SearchOption.AllDirectories);
-        Dictionary<string, JArray> oldDict = new Dictionary<string, JArray>();
-        foreach (var oldFile in oldFileArray)
+        // 2. 加载旧版字典
+        string oldDictPath = Tools.ReadLine("请拖入包含旧版译文的字典目录：");
+        var oldJsonDict = LoadOldJsonDictionary(oldDictPath);
+        if (oldJsonDict == null || oldJsonDict.Count == 0)
         {
-            string oldTrans = File.ReadAllText(oldFile);
-            // pt的json都是[起头的
-            if (!oldTrans.StartsWith("["))
-            {
-                break;
-            }
-            JArray jsonArray = JArray.Parse(oldTrans);
-            // 以相对路径作为键值，先不考虑同目录下同名文件的情况，出事了再改
-            string relativePath = Tools.GetrelativePath(oldFile, oldPath);
-            oldDict.Add(relativePath, jsonArray);
+            Console.WriteLine("未能加载任何旧版字典文件，操作中止。");
+            return;
         }
-        string newPath = Tools.ReadLine($"已导入{oldDict.Count}个文件。\n请拖入新版本游戏目录：");
-        string csvDirectory = Path.Combine(newPath, "CSV");
-        string erbDirectory = Path.Combine(newPath, "ERB");
-        string resDirectory = Path.Combine(newPath, "resources");
+
+        // 3. 获取新版游戏目录
+        string newGamePath = Tools.ReadLine($"已导入 {oldJsonDict.Count} 个字典文件。\n请拖入新版本游戏目录：");
 
         Timer.Start();
 
-        // 这段代码有空得封装一下，现在先跑起来
-        if (Directory.Exists(csvDirectory))
+        // 4. 定义并执行各类型文件的处理逻辑
+        // 为不同类型的文件定义其专属的解析逻辑
+        var fileProcessingTasks = new Action[]
         {
-            // 获取所有csv文件
-            var csvNames = Directory.GetFiles(csvDirectory, "*.csv", SearchOption.AllDirectories);
-            Parallel.ForEach(csvNames, csvName =>
-            {
-                // 获取相对路径
-                var relativePath = Tools.GetrelativePath(csvName, newPath);
-                // 得到输出路径
-                var targetFile = Path.Combine(appPath, relativePath);
-                // 解析CSV
-                CSVParser parser = new CSVParser();
-                parser.ParseFile(csvName);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-                string fileKey = Path.ChangeExtension(relativePath, ".json");
-                // 如果译文字典里已经存在相应的文件，取作参考，否则正常输出
-                if (oldDict.ContainsKey(fileKey))
+            () => ProcessDirectoryForUpdate(
+                newGamePath, "CSV", "*.csv", appPath, oldJsonDict, (filePath) =>
                 {
-                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
-
-                    int maxKey = int.MinValue;
-                    foreach (var jObject in referenceObjects)
-                    {
-                        string key = jObject["key"].ToString();
-                        // 获取键值最后的5位序号
-                        int num = int.Parse(Tools.lastNum.Match(key).Value);
-                        if (num > maxKey)
-                        {
-                            maxKey = num;
-                        }
-                    }
-                    // 得到起始序号
-                    int index = maxKey + 1;
-                    var csvList = parser.GetList().Distinct();
-                    List<JObject> PTJsonObjList = new List<JObject>();
-                    foreach (string text in csvList)
-                    {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
-                        // 找到对应条目，就直接用参考覆盖
-                        if (targetObject != null)
-                        {
-                            PTJsonObjList.Add(targetObject);
-                        }
-                        // 否则，新建一个index序号的新条目
-                        else
-                        {
-                            PTJsonObjList.Add(new JObject
-                            {
-                                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
-                                ["original"] = text,
-                                ["translation"] = ""
-                            });
-                            Console.WriteLine($"[CSV]{text}");
-                            // 仅在成功添加新条目时，才自增序号
-                            index++;
-                        }
-                    }
-
-                    if (PTJsonObjList.Count() > 0)
-                    {
-                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
-                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
-                    }
-                }
-                else
+                    var parser = new CSVParser();
+                    parser.ParseFile(filePath);
+                    return parser.GetList().Distinct().Select(item => new TranslationEntry { Original = item, Type = "文本" }).ToList();
+                }),
+            () => ProcessDirectoryForUpdate(
+                newGamePath, "ERB", "*.*", appPath, oldJsonDict, (filePath) =>
                 {
-                    parser.WriteJson(targetFile, relativePath);
-                }
-            });
-        }
-        else
-        {
-            throw new DirectoryNotFoundException($"找不到CSV目录: {csvDirectory}");
-        }
-        if (Directory.Exists(erbDirectory))
-        {
-            // 获取所有erb和erh文件
-            var erbNames = Directory.EnumerateFiles(erbDirectory, "*.*", SearchOption.AllDirectories)
-            .Where(file => erbExtensions.Any(x => file.EndsWith(x, StringComparison.OrdinalIgnoreCase)));
+                    // 跳过同名的 ERH 文件，因为它们会在解析 ERB 时被合并
+                    if (IsDuplicateErh(filePath)) return new List<TranslationEntry>();
 
-            Parallel.ForEach(erbNames, erbName =>
-            {
-                // 获取相对路径
-                var relativePath = Tools.GetrelativePath(erbName, newPath);
-                // 得到输出路径
-                var targetFile = Path.Combine(appPath, relativePath);
-                // 解析ERB
-                ERBParser parser = new ERBParser();
-                parser.ParseFile(erbName);
+                    var parser = new ERBParser();
+                    parser.ParseFile(filePath);
+                    var (nameList, textList) = parser.GetListTuple();
 
-                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-                string fileKey = Path.ChangeExtension(relativePath, ".json");
-                if (oldDict.ContainsKey(fileKey))
+                    var entries = new List<TranslationEntry>();
+                    entries.AddRange(parser.VarNameListFilter(nameList.lines)
+                        .Select(item => new TranslationEntry { Original = item.Item1, Context = item.Item2, Type = "变量" }));
+                    entries.AddRange(parser.TextListFilter(textList.lines)
+                        .Select(item => new TranslationEntry { Original = item.Item1, Context = item.Item2, Type = "文本" }));
+                    return entries;
+                }, erbExtensions), // 传入ERB/ERH后缀进行过滤
+            () => ProcessDirectoryForUpdate(
+                newGamePath, "resources", "*.csv", appPath, oldJsonDict, (filePath) =>
                 {
-                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
+                    var parser = new RESParser();
+                    parser.ParseFile(filePath);
+                    return parser.GetList().Distinct().Select(item => new TranslationEntry { Original = item, Type = "文本" }).ToList();
+                })
+        };
 
-                    int maxKey = int.MinValue;
-                    foreach (var jObject in referenceObjects)
-                    {
-                        string key = jObject["key"].ToString();
-                        // 获取键值最后的5位序号
-                        int num = int.Parse(Tools.lastNum.Match(key).Value);
-                        if (num > maxKey)
-                        {
-                            maxKey = num;
-                        }
-                    }
-                    // 得到起始序号
-                    int index = maxKey + 1;
-                    // 合并变量名和长文本
-                    var tuple = parser.GetListTuple();
-                    List<(string, string)> varNameList = parser.VarNameListFilter(tuple.name.lines);
-                    List<(string, string)> textList = parser.TextListFilter(tuple.text.lines).ToList();
-
-                    List<JObject> PTJsonObjList = new List<JObject>();
-                    // 处理变量名
-                    foreach ((string original, string context) in varNameList)
-                    {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == original);
-                        // 找到对应条目，就直接用参考覆盖
-                        if (targetObject != null)
-                        {
-                            // 版本过渡的临时处理
-                            if (!targetObject.ContainsKey("context"))
-                            {
-                                targetObject.Add("context", context);
-                            }
-                            PTJsonObjList.Add(targetObject);
-                        }
-                        // 否则，新建一个index序号的新条目
-                        else
-                        {
-                            PTJsonObjList.Add(new JObject
-                            {
-                                ["key"] = new StringBuilder("变量")
-                                .Append(Path.ChangeExtension(relativePath, ""))
-                                .Append(index.ToString().PadLeft(5, '0'))
-                                .ToString(),
-                                ["original"] = original,
-                                ["translation"] = "",
-                                ["context"] = context
-                            });
-                            Console.WriteLine($"[变量]{original}");
-                            // 仅在成功添加新条目时，才自增序号
-                            index++;
-                        }
-                    }
-                    // 处理长文本
-                    foreach ((string original, string context) in textList)
-                    {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == original);
-                        // 找到对应条目，就直接用参考覆盖
-                        if (targetObject != null)
-                        {
-                            // 版本过渡的临时处理
-                            if (!targetObject.ContainsKey("context"))
-                            {
-                                targetObject.Add("context", context);
-                            }
-                            PTJsonObjList.Add(targetObject);
-                        }
-                        // 否则，新建一个index序号的新条目
-                        else
-                        {
-                            PTJsonObjList.Add(new JObject
-                            {
-                                ["key"] = new StringBuilder("文本")
-                                .Append(Path.ChangeExtension(relativePath, ""))
-                                .Append(index.ToString().PadLeft(5, '0'))
-                                .ToString(),
-                                ["original"] = original,
-                                ["translation"] = "",
-                                ["context"] = context
-                            });
-                            Console.WriteLine($"[文本]{original}");
-                            // 仅在成功添加新条目时，才自增序号
-                            index++;
-                        }
-                    }
-
-                    if (PTJsonObjList.Count() > 0)
-                    {
-                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
-                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
-                    }
-                }
-                else
-                {
-                    parser.WriteJson(targetFile, relativePath);
-                }
-            });
-        }
-        else
-        {
-            throw new DirectoryNotFoundException($"找不到ERB目录: {erbDirectory}");
-        }
-        if (Directory.Exists(resDirectory))
-        {
-            // 获取所有res文件
-            var resNames = Directory.GetFiles(resDirectory, "*.csv", SearchOption.AllDirectories);
-            Parallel.ForEach(resNames, resName =>
-            {
-                // 获取相对路径
-                var relativePath = Tools.GetrelativePath(resName, newPath);
-                // 得到输出路径
-                var targetFile = Path.Combine(appPath, relativePath);
-                // 解析CSV
-                RESParser parser = new RESParser();
-                parser.ParseFile(resName);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-                string fileKey = Path.ChangeExtension(relativePath, ".json");
-                // 如果译文字典里已经存在相应的文件，取作参考，否则正常输出
-                if (oldDict.ContainsKey(fileKey))
-                {
-                    List<JObject> referenceObjects = oldDict[fileKey].ToObject<List<JObject>>();
-
-                    int maxKey = int.MinValue;
-                    foreach (var jObject in referenceObjects)
-                    {
-                        string key = jObject["key"].ToString();
-                        // 获取键值最后的5位序号
-                        int num = int.Parse(Tools.lastNum.Match(key).Value);
-                        if (num > maxKey)
-                        {
-                            maxKey = num;
-                        }
-                    }
-                    // 得到起始序号
-                    int index = maxKey + 1;
-                    var resList = parser.GetList().Distinct();
-                    List<JObject> PTJsonObjList = new List<JObject>();
-                    foreach (string text in resList)
-                    {
-                        JObject targetObject = referenceObjects.FirstOrDefault(j => j["original"].ToString() == text);
-                        // 找到对应条目，就直接用参考覆盖
-                        if (targetObject != null)
-                        {
-                            PTJsonObjList.Add(targetObject);
-                        }
-                        // 否则，新建一个index序号的新条目
-                        else
-                        {
-                            PTJsonObjList.Add(new JObject
-                            {
-                                ["key"] = Path.ChangeExtension(relativePath, "") + index.ToString().PadLeft(5, '0'),
-                                ["original"] = text,
-                                ["translation"] = ""
-                            });
-                            Console.WriteLine($"[IMG]{text}");
-                            // 仅在成功添加新条目时，才自增序号
-                            index++;
-                        }
-                    }
-
-                    if (PTJsonObjList.Count() > 0)
-                    {
-                        string jsonContent = JsonConvert.SerializeObject(PTJsonObjList, Formatting.Indented);
-                        File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
-                    }
-                }
-                else
-                {
-                    parser.WriteJson(targetFile, relativePath);
-                }
-            });
-        }
+        // 并行处理所有任务
+        Parallel.Invoke(fileProcessingTasks);
 
         Timer.Stop();
         if (Configs.autoOpenFolder)
@@ -1310,6 +1074,211 @@ public static class Start
             Process.Start(appPath);
         }
     }
+
+    /// <summary>
+    /// 加载指定路径下的所有旧版PT字典文件到内存中。
+    /// </summary>
+    private static Dictionary<string, JArray> LoadOldJsonDictionary(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            Console.WriteLine($"【错误】目录不存在：{path}");
+            return null;
+        }
+        var oldFileArray = Directory.GetFiles(path, "*.json", SearchOption.AllDirectories);
+        var oldDict = new Dictionary<string, JArray>();
+        foreach (var oldFile in oldFileArray)
+        {
+            try
+            {
+                string oldTrans = File.ReadAllText(oldFile);
+                // PT字典总是以[开头
+                if (oldTrans.Trim().StartsWith("["))
+                {
+                    JArray jsonArray = JArray.Parse(oldTrans);
+                    string relativePath = Tools.GetrelativePath(oldFile, path);
+                    oldDict[relativePath] = jsonArray;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"【警告】读取或解析旧字典失败: {Path.GetFileName(oldFile)} - {ex.Message}");
+            }
+        }
+        return oldDict;
+    }
+
+    /// <summary>
+    /// （核心处理逻辑）处理指定子目录下的所有文件，与旧字典合并后生成新字典。
+    /// </summary>
+    /// <param name="newGamePath">新版游戏根目录。</param>
+    /// <param name="subDirectory">要处理的子目录名 (例如 "CSV", "ERB")。</param>
+    /// <param name="searchPattern">文件搜索模式 (例如 "*.csv")。</param>
+    /// <param name="appPath">输出目录。</param>
+    /// <param name="oldDict">已加载的旧版字典。</param>
+    /// <param name="parseAction">一个委托，接收文件路径并返回解析出的翻译条目列表。</param>
+    /// <param name="allowedExtensions">（可选）用于过滤文件的后缀名数组。</param>
+    private static void ProcessDirectoryForUpdate(
+        string newGamePath,
+        string subDirectory,
+        string searchPattern,
+        string appPath,
+        Dictionary<string, JArray> oldDict,
+        Func<string, List<TranslationEntry>> parseAction,
+        string[] allowedExtensions = null)
+    {
+        var directoryPath = Path.Combine(newGamePath, subDirectory);
+        if (!Directory.Exists(directoryPath))
+        {
+            Console.WriteLine($"【警告】找不到目录: {directoryPath}");
+            return;
+        }
+
+        var files = Directory.EnumerateFiles(directoryPath, searchPattern, SearchOption.AllDirectories);
+        if (allowedExtensions != null && allowedExtensions.Length > 0)
+        {
+            files = files.Where(file => allowedExtensions.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        Parallel.ForEach(files, filePath =>
+        {
+            var relativePath = Tools.GetrelativePath(filePath, newGamePath);
+            var targetFile = Path.Combine(appPath, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+            // 1. 解析新文件，获取所有条目
+            var newEntries = parseAction(filePath);
+            if (!newEntries.Any()) return;
+
+            // 2. 检查是否存在旧字典
+            string fileKey = Path.ChangeExtension(relativePath, ".json");
+            if (oldDict.TryGetValue(fileKey, out JArray oldJsonArray))
+            {
+                // 3a. 合并新旧条目
+                var finalJsonList = MergeEntries(newEntries, oldJsonArray, relativePath);
+                if (finalJsonList.Any())
+                {
+                    string jsonContent = JsonConvert.SerializeObject(finalJsonList, Formatting.Indented);
+                    File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+                }
+            }
+            else
+            {
+                // 3b. 如果没有旧字典，则直接生成新字典
+                var newJsonObjects = CreateNewJsonObjects(newEntries, relativePath);
+                if (newJsonObjects.Any())
+                {
+                    string jsonContent = JsonConvert.SerializeObject(newJsonObjects, Formatting.Indented);
+                    File.WriteAllText(Path.ChangeExtension(targetFile, ".json"), jsonContent);
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// 将新解析出的条目与旧字典的JObject列表进行合并。
+    /// </summary>
+    private static List<JObject> MergeEntries(List<TranslationEntry> newEntries, JArray oldJsonArray, string relativePath)
+    {
+        var finalJsonList = new List<JObject>();
+        var referenceObjects = oldJsonArray.ToObject<List<JObject>>();
+        var oldEntriesDict = referenceObjects.ToDictionary(j => j["original"]?.ToString(), j => j);
+
+        int maxKeyNum = -1;
+        if (referenceObjects.Any())
+        {
+            maxKeyNum = referenceObjects.Max(j => int.Parse(Tools.lastNum.Match(j["key"]?.ToString() ?? "0").Value));
+        }
+        int nextKeyIndex = maxKeyNum + 1;
+
+        string basePathWithoutExt = Path.ChangeExtension(relativePath, "");
+
+        foreach (var entry in newEntries)
+        {
+            if (oldEntriesDict.TryGetValue(entry.Original, out JObject existingObject))
+            {
+                // 如果旧条目存在，直接使用
+                // 可以选择性更新 context
+                if (entry.Context != null && (!existingObject.ContainsKey("context") || existingObject["context"]?.ToString() != entry.Context))
+                {
+                    existingObject["context"] = entry.Context;
+                }
+                finalJsonList.Add(existingObject);
+            }
+            else
+            {
+                // 如果是新条目，则创建并添加
+                Console.WriteLine($"[{entry.Type}] {entry.Original}");
+                finalJsonList.Add(entry.ToJObject(basePathWithoutExt, ref nextKeyIndex));
+            }
+        }
+        return finalJsonList;
+    }
+
+    /// <summary>
+    /// 从新的条目列表直接创建JObject列表（用于没有旧字典参考的情况）。
+    /// </summary>
+    private static List<JObject> CreateNewJsonObjects(List<TranslationEntry> newEntries, string relativePath)
+    {
+        int keyIndex = 0;
+        string basePathWithoutExt = Path.ChangeExtension(relativePath, "");
+        var newJsonObjects = new List<JObject>();
+
+        foreach (var entry in newEntries)
+        {
+            newJsonObjects.Add(entry.ToJObject(basePathWithoutExt, ref keyIndex));
+        }
+        return newJsonObjects;
+    }
+
+    /// <summary>
+    /// 判断一个文件是否是与ERB文件同名的ERH文件。
+    /// </summary>
+    private static bool IsDuplicateErh(string filePath)
+    {
+        return filePath.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) &&
+               File.Exists(Path.ChangeExtension(filePath, ".erb"));
+    }
+
+    /// <summary>
+    /// 用于统一表示不同类型解析器输出的翻译条目的内部辅助类。
+    /// </summary>
+    private class TranslationEntry
+    {
+        public string Original { get; set; }
+        public string Context { get; set; }
+        public string Type { get; set; } // "变量", "文本", "CSV" 等
+
+        /// <summary>
+        /// 将条目转换为用于输出的 JObject。
+        /// </summary>
+        public JObject ToJObject(string keyBasePath, ref int index)
+        {
+            var keyBuilder = new StringBuilder();
+            if (Type == "变量" || Type == "文本")
+            {
+                keyBuilder.Append(Type);
+            }
+            keyBuilder.Append(keyBasePath).Append(index.ToString("D5"));
+
+            var jobj = new JObject
+            {
+                ["key"] = keyBuilder.ToString(),
+                ["original"] = Original,
+                ["translation"] = "",
+                ["stage"] = 0
+            };
+
+            if (!string.IsNullOrEmpty(Context))
+            {
+                jobj["context"] = Context;
+            }
+
+            index++; // 序号自增
+            return jobj;
+        }
+    }
+    #endregion
 
     /// <summary>
     /// 对比新旧两个目录，提取所有新增或内容被修改的文件到新目录。
