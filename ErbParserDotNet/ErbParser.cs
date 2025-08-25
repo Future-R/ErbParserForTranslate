@@ -524,69 +524,50 @@ public class ERBParser
                 textList.Add(rightValue, contexts);
             }
             // DataTable相关函数
-            else if (lineString.StartsWith("DT_ROW_ADD") ||
+            else if (lineString.StartsWith("DT_CREATE") ||
+                     lineString.StartsWith("DT_EXIST") ||
+                     lineString.StartsWith("DT_RELEASE") ||
+                     lineString.StartsWith("DT_CLEAR") ||
+                     lineString.StartsWith("DT_NOCASE") ||
+                     lineString.StartsWith("DT_COLUMN_ADD") ||
+                     lineString.StartsWith("DT_COLUMN_EXIST") ||
+                     lineString.StartsWith("DT_COLUMN_REMOVE") ||
+                     lineString.StartsWith("DT_COLUMN_LENGTH") ||
+                     lineString.StartsWith("DT_COLUMN_OPTIONS") ||
+                     lineString.StartsWith("DT_COLUMN_NAMES") ||
+                     lineString.StartsWith("DT_ROW_ADD") ||
                      lineString.StartsWith("DT_ROW_SET") ||
                      lineString.StartsWith("DT_ROW_REMOVE") ||
-                     lineString.StartsWith("DT_ROW_LENGTH"))
+                     lineString.StartsWith("DT_ROW_LENGTH") ||
+                     lineString.StartsWith("DT_CELL_GET") ||
+                     lineString.StartsWith("DT_CELL_GETS") ||
+                     lineString.StartsWith("DT_CELL_ISNULL") ||
+                     lineString.StartsWith("DT_CELL_SET") ||
+                     lineString.StartsWith("DT_SELECT") ||
+                     lineString.StartsWith("DT_TOXML") ||
+                     lineString.StartsWith("DT_FROMXML"))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
-                // 如果没有参数，则跳过
                 if (spIndex == -1) continue;
 
-                string rightValue = lineString.Substring(spIndex).TrimStart();
+                string rightValue = lineString.Substring(spIndex).Trim();
 
-                // 统一处理带括号的函数式调用，例如 DT_ROW_ADD("db", ...)
+                // 检查是否被括号包围
                 if (rightValue.StartsWith("(") && rightValue.EndsWith(")"))
                 {
-                    rightValue = rightValue.Substring(1, rightValue.Length - 2);
+                    rightValue = rightValue.Substring(1, rightValue.Length - 2).Trim();
                 }
 
-                string[] parts = rightValue.Split(new[] { ',' });
+                string[] parameters = rightValue.Split(',').Select(p => p.Trim()).ToArray();
 
-                if (parts.Length == 0) continue;
+                foreach (var param in parameters)
+                {
+                    if (string.IsNullOrEmpty(param)) continue;
 
-                // 第一个参数总是 dataTableName，可能是字符串或变量，交由表达式解析
-                var (vari1, text1) = ExpressionParser.Slash(parts[0].Trim());
-                varNameList.AddRange(vari1, contexts);
-                textList.AddRange(text1, contexts);
-
-                if (lineString.Trim().StartsWith("DT_ROW_LENGTH"))
-                {
-                    // DT_ROW_LENGTH 只有一个参数，已经处理完毕
-                }
-                else if (lineString.Trim().StartsWith("DT_ROW_REMOVE"))
-                {
-                    // 后续参数是 idValue(s) 和 count，视为变量
-                    var rightParts = parts.Skip(1).Select(p => p.Trim()).Where(p => !string.IsNullOrEmpty(p));
-                    varNameList.AddRange(rightParts, contexts);
-                }
-                else if (lineString.Trim().StartsWith("DT_ROW_SET"))
-                {
-                    if (parts.Length > 1)
-                    {
-                        // 第二个参数是 idValue，视为变量
-                        varNameList.Add(parts[1].Trim(), contexts);
-
-                        // 后续参数是 (columnName, columnValue) 对或 (columnNames, columnValues, count)
-                        // 将它们全部交给表达式解析器处理是最稳妥的方式
-                        foreach (var item in parts.Skip(2))
-                        {
-                            var (vari, text) = ExpressionParser.Slash(item.Trim());
-                            varNameList.AddRange(vari, contexts);
-                            textList.AddRange(text, contexts);
-                        }
-                    }
-                }
-                else if (lineString.Trim().StartsWith("DT_ROW_ADD"))
-                {
-                    // 后续参数是 (columnName, columnValue) 对或 (columnNames, columnValues, count)
-                    // 同样全部交给表达式解析器处理
-                    foreach (var item in parts.Skip(1))
-                    {
-                        var (vari, text) = ExpressionParser.Slash(item.Trim());
-                        varNameList.AddRange(vari, contexts);
-                        textList.AddRange(text, contexts);
-                    }
+                    // 使用ExpressionParser.Slash解析每个参数
+                    var (vari, text) = ExpressionParser.Slash(param);
+                    varNameList.AddRange(vari, contexts);
+                    textList.AddRange(text, contexts);
                 }
             }
 
