@@ -674,7 +674,7 @@ public static class Start
             {
                 if (isIMG || (isCSV))
                 {
-                    if (!targetPath.Contains("修正字典"))
+                    if (!targetPath.Contains("修正字典") && !targetPath.Contains("erd字典"))
                     {
                         Console.WriteLine($"【错误】：没找到{targetPath}.CSV！");
                     }
@@ -723,7 +723,8 @@ public static class Start
                 }
             }
         });
-
+        // 重命名ERD文件
+        Tools.RenameErdFiles(transFileDirectory, gameDirectory);
         Timer.Stop();
 
         Console.WriteLine("翻译已完成！");
@@ -1062,7 +1063,8 @@ public static class Start
                     var parser = new RESParser();
                     parser.ParseFile(filePath);
                     return parser.GetList().Distinct().Select(item => new TranslationEntry { Original = item, Type = "文本" }).ToList();
-                })
+                }),
+            () => ProcessErdFilesForUpdate(newGamePath, appPath, oldJsonDict)
         };
 
         // 并行处理所有任务
@@ -1074,6 +1076,72 @@ public static class Start
             Process.Start(appPath);
         }
     }
+
+    /// <summary>
+    /// （ERD专属处理逻辑）扫描ERB目录下所有.erd文件，将它们的文件名作为条目更新到单一的ERD字典中。
+    /// </summary>
+    /// <param name="newGamePath">新版游戏根目录。</param>
+    /// <param name="appPath">输出目录。</param>
+    /// <param name="oldDict">已加载的旧版字典。</param>
+    private static void ProcessErdFilesForUpdate(
+        string newGamePath,
+        string appPath,
+        Dictionary<string, JArray> oldDict)
+    {
+        var erdDirectoryPath = Path.Combine(newGamePath, "ERB");
+        if (!Directory.Exists(erdDirectoryPath))
+        {
+            // 如果ERB目录不存在，就没什么可做的了。
+            return;
+        }
+
+        // 1. 查找新版游戏中所有的 .erd 文件
+        var erdFiles = Directory.EnumerateFiles(erdDirectoryPath, "*.erd", SearchOption.AllDirectories).ToList();
+        if (!erdFiles.Any())
+        {
+            // 如果没有找到 .erd 文件，则直接返回。
+            return;
+        }
+
+        Console.WriteLine($"发现 {erdFiles.Count} 个 .erd 文件，正在处理文件名...");
+
+        // 2. 将每个 .erd 文件的文件名（不含扩展名）转换为标准化的 TranslationEntry
+        var newEntries = erdFiles.Select(filePath => new TranslationEntry
+        {
+            // 核心逻辑：Original 值是文件名本身
+            Original = Path.GetFileNameWithoutExtension(filePath),
+            Type = "ERD文件名"
+        }).ToList();
+
+        // 3. 定义输出字典的相对路径和绝对路径
+        // 遵循参考代码的约定，将ERD字典放在CSV目录下
+        const string erdDictRelativePath = @"CSV\ERD字典.json";
+        var targetFile = Path.Combine(appPath, erdDictRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+        // 4. 检查是否存在旧的 ERD 字典
+        if (oldDict.TryGetValue(erdDictRelativePath, out JArray oldJsonArray))
+        {
+            // 4a. 如果存在，则合并新旧条目
+            var finalJsonList = MergeEntries(newEntries, oldJsonArray, erdDictRelativePath);
+            if (finalJsonList.Any())
+            {
+                string jsonContent = JsonConvert.SerializeObject(finalJsonList, Formatting.Indented);
+                File.WriteAllText(targetFile, jsonContent);
+            }
+        }
+        else
+        {
+            // 4b. 如果不存在，则根据新条目直接创建
+            var newJsonObjects = CreateNewJsonObjects(newEntries, erdDictRelativePath);
+            if (newJsonObjects.Any())
+            {
+                string jsonContent = JsonConvert.SerializeObject(newJsonObjects, Formatting.Indented);
+                File.WriteAllText(targetFile, jsonContent);
+            }
+        }
+    }
+
 
     /// <summary>
     /// 加载指定路径下的所有旧版PT字典文件到内存中。
@@ -1178,11 +1246,24 @@ public static class Start
     /// <summary>
     /// 将新解析出的条目与旧字典的JObject列表进行合并。
     /// </summary>
+    /// <summary>
+    /// 将新解析出的条目与旧字典的JObject列表进行合并（已修复重复键问题）。
+    /// </summary>
     private static List<JObject> MergeEntries(List<TranslationEntry> newEntries, JArray oldJsonArray, string relativePath)
     {
         var finalJsonList = new List<JObject>();
         var referenceObjects = oldJsonArray.ToObject<List<JObject>>();
-        var oldEntriesDict = referenceObjects.ToDictionary(j => j["original"]?.ToString(), j => j);
+
+        // 使用 TryAdd 来处理潜在的重复键，只保留第一个遇到的条目
+        var oldEntriesDict = new Dictionary<string, JObject>();
+        foreach (var j in referenceObjects)
+        {
+            var original = j["original"]?.ToString();
+            if (original != null && !oldEntriesDict.ContainsKey(original))
+            {
+                oldEntriesDict.Add(original, j);
+            }
+        }
 
         int maxKeyNum = -1;
         if (referenceObjects.Any())
@@ -1210,10 +1291,16 @@ public static class Start
                 // 如果是新条目，则创建并添加
                 Console.WriteLine($"[{entry.Type}] {entry.Original}");
                 finalJsonList.Add(entry.ToJObject(basePathWithoutExt, ref nextKeyIndex));
+                // 将新添加的条目也加入字典，以处理源文件内的重复原文
+                if (!oldEntriesDict.ContainsKey(entry.Original))
+                {
+                    oldEntriesDict.Add(entry.Original, finalJsonList.Last() as JObject);
+                }
             }
         }
         return finalJsonList;
     }
+
 
     /// <summary>
     /// 从新的条目列表直接创建JObject列表（用于没有旧字典参考的情况）。

@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
-using System.Text;
-using System.Text.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Unicode;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace ErbParserDotNet
 {

@@ -529,4 +529,64 @@ public static class Tools
         }
         return input;
     }
+
+    public static void RenameErdFiles(string 字典目录, string 游戏目录)
+    {
+        string erdDictPath = Path.Combine(字典目录, "CSV", "ERD字典.json");
+        // 如果字典不存在，则不执行任何操作
+        if (!File.Exists(erdDictPath))
+        {
+            return;
+        }
+        Console.WriteLine("正在根据ERD字典重命名文件……");
+        try
+        {
+            var jsonContent = File.ReadAllText(erdDictPath);
+            var entries = JArray.Parse(jsonContent);
+
+            // 遍历游戏目录下的所有 .erd 文件
+            var allErdFiles = Directory.GetFiles(游戏目录, "*.erd", SearchOption.AllDirectories)
+                                       .ToDictionary(p => Path.GetFileNameWithoutExtension(p), p => p);
+
+            int renameCount = 0;
+            foreach (JObject entry in entries)
+            {
+                string original = entry["original"]?.ToString();
+                string translation = entry["translation"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(original) || string.IsNullOrWhiteSpace(translation))
+                    continue;
+
+                // 如果原始文件名和翻译文件名相同，则跳过
+                if (original.Equals(translation, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // 在已复制的游戏目录中查找原始文件
+                if (allErdFiles.TryGetValue(original, out string sourcePath))
+                {
+                    string fileDirectory = Path.GetDirectoryName(sourcePath);
+                    string destPath = Path.Combine(fileDirectory, translation + ".erd");
+
+                    try
+                    {
+                        File.Move(sourcePath, destPath);
+                        Console.WriteLine($"重命名: {original}.erd -> {translation}.erd");
+                        renameCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"【错误】重命名文件失败: {original}.erd - {ex.Message}");
+                    }
+                }
+            }
+            if (renameCount > 0)
+            {
+                Console.WriteLine($"共 {renameCount} 个 .erd 文件被重命名。");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"【错误】处理 ERD 字典或重命名文件时发生异常: {ex.Message}");
+        }
+    }
 }
