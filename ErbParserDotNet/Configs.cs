@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 public static class Configs
 {
-    public const string Version = "0.70";
+    public const string Version = "0.71";
     public static HashSet<string> extensions { get; private set; }
     // 常用的有UTF-8、UTF-8 with BOM、Shift JIS
     public static Encoding fileEncoding { get; private set; }

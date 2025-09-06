@@ -411,8 +411,8 @@ public static class Start
                 //if (jobj.ContainsKey("stage") && (int)jobj["stage"].ToObject(typeof(int)) > 0)
                 if (jobj.ContainsKey("stage") && jobj["stage"].ToString() == "1")
                 {
-                    string 原文 = jobj["original"].ToString();
-                    string 译文 = jobj["translation"].ToString();
+                    string 原文 = jobj["original"].ToString().Trim();
+                    string 译文 = jobj["translation"].ToString().Trim();
                     if (已翻译字典.ContainsKey(原文))
                     {
                         if (已翻译字典[原文] != 译文)
@@ -461,8 +461,8 @@ public static class Start
                 string 原文 = jobj["original"].ToString();
                 if (jobj.ContainsKey("stage") && jobj["stage"].ToString() == "0")
                 {
-                    // 天麻临时特殊处理1
-                    Match IMGSRC = Regex.Match(原文, $"^\"<img src='(.*?)'>\"$");
+                    //// 天麻临时特殊处理1
+                    //Match IMGSRC = Regex.Match(原文, $"^\"<img src='(.*?)'>\"$");
                     if (已翻译字典.ContainsKey(原文))
                     {
                         Console.WriteLine($"【翻译】{已翻译字典[原文]}");
@@ -470,21 +470,72 @@ public static class Start
                         jobj["stage"] = 1;
                         需要输出 = true;
                     }
-                    // 天麻临时特殊处理1
-                    else if (IMGSRC.Success && 已翻译字典.ContainsKey(IMGSRC.Groups[1].Value))
-                    {
-                        Console.WriteLine($"【天麻】{已翻译字典[IMGSRC.Groups[1].Value]}");
-                        jobj["translation"] = $"\"<img src='{已翻译字典[IMGSRC.Groups[1].Value]}'>\"";
-                        jobj["stage"] = 1;
-                        需要输出 = true;
-                    }
+                    //// 天麻临时特殊处理1
+                    //else if (IMGSRC.Success && 已翻译字典.ContainsKey(IMGSRC.Groups[1].Value))
+                    //{
+                    //    Console.WriteLine($"【天麻】{已翻译字典[IMGSRC.Groups[1].Value]}");
+                    //    jobj["translation"] = $"\"<img src='{已翻译字典[IMGSRC.Groups[1].Value]}'>\"";
+                    //    jobj["stage"] = 1;
+                    //    需要输出 = true;
+                    //}
                     // 引号括起的也要拿去和不括起的比较
-                    else if (已翻译字典.ContainsKey(原文.Trim('"')))
+                    else if (原文.Trim().StartsWith("\"") || 原文.Trim().EndsWith("\""))
                     {
-                        Console.WriteLine($"【引号】{已翻译字典[原文.Trim('"')]}");
-                        jobj["translation"] = $"\"{已翻译字典[原文.Trim('"')]}\"";
-                        jobj["stage"] = 1;
-                        需要输出 = true;
+                        string 处理后原文 = 原文.Trim().Trim('"');
+
+                        if (已翻译字典.ContainsKey(处理后原文))
+                        {
+                            char? 前引号 = null;
+                            char? 后引号 = null;
+                            if (原文.Trim().StartsWith("\""))
+                            {
+                                前引号 = '"';
+                            }
+                            if (原文.Trim().EndsWith("\""))
+                            {
+                                后引号 = '"';
+                            }
+
+                            Console.WriteLine($"【括号】{已翻译字典[处理后原文]}");
+                            jobj["translation"] = $"{前引号}{已翻译字典[处理后原文]}{后引号}";
+                            jobj["stage"] = 1;
+                            需要输出 = true;
+                        }
+                    }
+                    // 处理残留括号
+                    else if (原文.Trim().StartsWith("(\"") || 原文.Trim().EndsWith("\")"))
+                    {
+                        string 处理后原文 = 原文.Trim().TrimStart('(').TrimEnd(')').Trim('"');
+                        if (已翻译字典.ContainsKey(处理后原文))
+                        {
+                            char? 前括号 = null;
+                            char? 后括号 = null;
+                            char? 前引号 = null;
+                            char? 后引号 = null;
+                            if (原文.Trim().StartsWith("(\""))
+                            {
+                                前括号 = '(';
+                                前引号 = '"';
+                            }
+                            else if(原文.Trim().StartsWith("("))
+                            {
+                                前括号 = '(';
+                            }
+                            if (原文.Trim().EndsWith("\")"))
+                            {
+                                后括号 = ')';
+                                后引号 = '"';
+                            }
+                            else if (原文.Trim().StartsWith(")"))
+                            {
+                                后括号 = ')';
+                            }
+
+                            Console.WriteLine($"【括号】{已翻译字典[处理后原文]}");
+                            jobj["translation"] = $"{前括号}{前引号}{已翻译字典[处理后原文]}{后引号}{后括号}";
+                            jobj["stage"] = 1;
+                            需要输出 = true;
+                        }
                     }
                     // 百分号括起的也要拿去和不括起的比较
                     else if (原文.StartsWith("%") && 原文.EndsWith("%") && 已翻译字典.ContainsKey(原文.Trim('%')))
@@ -494,14 +545,14 @@ public static class Start
                         jobj["stage"] = 1;
                         需要输出 = true;
                     }
-                    // 天麻临时特殊处理2
-                    else if (原文.StartsWith("IMGNO_") && 已翻译字典.ContainsKey(原文.Substring(6)))
-                    {
-                        Console.WriteLine($"【天麻】{已翻译字典[原文.Substring(6)]}");
-                        jobj["translation"] = $"IMGNO_{已翻译字典[原文.Substring(6)]}";
-                        jobj["stage"] = 1;
-                        需要输出 = true;
-                    }
+                    //// 天麻临时特殊处理2
+                    //else if (原文.StartsWith("IMGNO_") && 已翻译字典.ContainsKey(原文.Substring(6)))
+                    //{
+                    //    Console.WriteLine($"【天麻】{已翻译字典[原文.Substring(6)]}");
+                    //    jobj["translation"] = $"IMGNO_{已翻译字典[原文.Substring(6)]}";
+                    //    jobj["stage"] = 1;
+                    //    需要输出 = true;
+                    //}
                 }
                 新文件.Add(jobj);
             }
