@@ -848,9 +848,11 @@ public class ERBParser
 
     private void AddObjsForType(string type, StringList originalList, List<JObject> objs, string relativePath, StringList referenceList)
     {
+        string reason = " 行数不匹配 ";
         // 条数相等不一定匹配，但不相等肯定不匹配
         if (originalList.lines.Count == referenceList.lines.Count)
         {
+            reason = " 合并相同词条后词条数不同 ";
             var originObjs = type == "文本" ? TextListFilter(originalList.lines) : VarNameListFilter(originalList.lines);
             var referenceObjs = type == "文本" ? TextListFilter(referenceList.lines) : VarNameListFilter(referenceList.lines);
             // 二次检查
@@ -886,7 +888,7 @@ public class ERBParser
                 return;
             }
         }
-        Console.WriteLine($"【警告】：跳过了填充{relativePath}{type}。");
+        Console.WriteLine($"【警告】：因{reason}跳过了填充{relativePath}{type}。");
         // 改用常规模式
         AddObjsForType(type, originalList, objs, relativePath);
     }

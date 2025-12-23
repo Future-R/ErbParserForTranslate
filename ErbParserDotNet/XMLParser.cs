@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 
 public class XMLParser
@@ -16,7 +17,7 @@ public class XMLParser
     {
         try
         {
-            XDocument doc = XDocument.Load(filePath);
+            XDocument doc = XDocument.Load(filePath, LoadOptions.None);
 
             // 技能
             ProcessSkillDefinitions(doc, valueList);
@@ -32,7 +33,7 @@ public class XMLParser
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"错误: {ex.Message}");
+            Console.WriteLine($"【错误】：{Path.GetFileName(filePath)}  {ex.Message}");
         }
     }
 
@@ -81,7 +82,8 @@ public class XMLParser
             XElement contents = command.Element("contents");
             if (contents != null && !string.IsNullOrWhiteSpace(contents.Value))
             {
-                ProcessContentLines(contents.Value, terms);
+                //ProcessContentLines(contents.Value, terms);
+                terms.Add(contents.Value);
             }
         }
     }
@@ -95,6 +97,7 @@ public class XMLParser
         }
     }
 
+    [Obsolete]
     static void ProcessContentLines(string content, List<string> terms)
     {
         // 分割多行文本并清理格式

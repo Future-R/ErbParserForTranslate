@@ -126,6 +126,7 @@ public static class Start
         Console.WriteLine($"正在转换{appPath}下的所有文件为UTF-8编码……");
         var files = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories).Where(file=>file.EndsWith(".erb", StringComparison.OrdinalIgnoreCase) ||
                                                                                                 file.EndsWith(".erh", StringComparison.OrdinalIgnoreCase) ||
+                                                                                                file.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) ||
                                                                                                 file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
         Parallel.ForEach(files, filepath =>
         {
