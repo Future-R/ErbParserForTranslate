@@ -53,6 +53,10 @@ public class XMLParser
             {
                 ExtractAttributeValue(reqtalent, "name", terms);
             }
+            foreach (XElement reqchara in defname.Elements("reqchara"))
+            {
+                ExtractAttributeValue(reqchara, "name", terms);
+            }
         }
     }
 
