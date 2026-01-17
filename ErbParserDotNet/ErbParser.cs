@@ -218,6 +218,27 @@ public class ERBParser
                     }
                 }
             }
+            //针对性补丁，针对"CALLF TAG_PRINT"这块没被提取做补丁
+            //为什么被包在IF-ELSE结构里的还提取不出来，搞不懂
+            else if (lineString.StartsWith("CALLF") || lineString.StartsWith("    CALLF"))
+            {
+                int spIndex = Tools.GetSpaceIndex(lineString);
+                string rightValue = lineString.Substring(spIndex).Trim();
+                if (rightValue.StartsWith("TAG_PRINT"))
+                {
+                    int left = rightValue.IndexOf('(');
+                    int right = rightValue.LastIndexOf(')');
+                    if (left != -1 && right > left)
+                    {
+                        string content = rightValue.Substring(left + 1, right - left - 1).Trim();
+                        if (content.StartsWith("@"))
+                        {
+                            textList.Add(content, contexts);
+                        }
+                    }
+                }
+
+            }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
             else if (lineString.StartsWith("#DIM"))
             {
@@ -282,7 +303,15 @@ public class ERBParser
 
                     // 类型推导，如果是数值型，那么右值不用翻译，continue掉
                     bool isIntegerValue = leftEnumer.FirstOrDefault() == "#DIM";
-                    if (isIntegerValue) continue;
+                    // 针对等号右边一大串要翻译的GETNUM做的针对性补丁，直接把右值全部输出
+                    if (isIntegerValue)
+                    {
+                        if (rightValue.Contains("GETNUM"))
+                        {
+                            textList.Add(rightValue, contexts);
+                        }
+                        continue;
+                    }
                     // 否则是字符串型，逗号切割，不trim掉双引号是为了方便后续做替换
                     else
                     {
