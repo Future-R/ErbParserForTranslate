@@ -220,7 +220,7 @@ public class ERBParser
             }
             //针对性补丁，针对"CALLF TAG_PRINT"这块没被提取做补丁
             //为什么被包在IF-ELSE结构里的还提取不出来，搞不懂
-            else if (lineString.StartsWith("CALLF") || lineString.StartsWith("    CALLF"))
+            else if (lineString.StartsWith("CALLF") || lineString.StartsWith("<Tab>CALLF"))
             {
                 int spIndex = Tools.GetSpaceIndex(lineString);
                 string rightValue = lineString.Substring(spIndex).Trim();
@@ -231,10 +231,12 @@ public class ERBParser
                     if (left != -1 && right > left)
                     {
                         string content = rightValue.Substring(left + 1, right - left - 1).Trim();
-                        if (content.StartsWith("@"))
+                        //这块还有个套娃，服了
+                        if (content.StartsWith("@") || content.StartsWith("TAG_PRINT_SHAPE"))
                         {
                             textList.Add(content, contexts);
                         }
+                       
                     }
                 }
 
