@@ -472,6 +472,14 @@ public static class Tools
         {
             value = context.IndexOf('　');
         }
+        // 还有狗日的tab当空格用
+        if (value == -1 && context.Contains("<Tab>"))
+        {
+            if (context.IndexOf('>') > context.IndexOf('<'))
+            {
+                value = context.IndexOf('>');
+            }
+        }
         return value;
     }
 
