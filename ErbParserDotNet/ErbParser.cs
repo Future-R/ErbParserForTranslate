@@ -900,7 +900,7 @@ public class ERBParser
                 {
                     stage = -1;
                 }
-                return new JObject
+                var jobj = new JObject
                 {
                     ["key"] = new StringBuilder(type)
                         .Append(Path.ChangeExtension(relativePath, ""))
@@ -909,8 +909,13 @@ public class ERBParser
                     ["original"] = original,
                     ["translation"] = "",
                     ["stage"] = stage,
-                    ["context"] = item.Item2,
                 };
+                // 写入上下文
+                if (Configs.writeContext)
+                {
+                    jobj["context"] = item.Item2;
+                }
+                return jobj;
             });
             objs.AddRange(newObjs);
         }
@@ -925,7 +930,7 @@ public class ERBParser
                 {
                     stage = -1;
                 }
-                return new JObject
+                var jobj = new JObject
                 {
                     ["key"] = new StringBuilder(type)
                         .Append(Path.ChangeExtension(relativePath, ""))
@@ -934,8 +939,13 @@ public class ERBParser
                     ["original"] = item.Item1,
                     ["translation"] = "",
                     ["stage"] = stage,
-                    ["context"] = item.Item2
                 };
+                // 写入上下文
+                if (Configs.writeContext)
+                {
+                    jobj["context"] = item.Item2;
+                }
+                return jobj;
             });
             objs.AddRange(newObjs);
         }
@@ -971,14 +981,19 @@ public class ERBParser
                         stage = -1;
                     }
 
-                    objs.Add(new JObject
+                    var jobj = new JObject
                     {
                         ["key"] = key,
                         ["original"] = original,
                         ["translation"] = translation,
                         ["stage"] = stage,
-                        ["context"] = context
-                    });
+                    };
+                    // 写入上下文
+                    if (Configs.writeContext)
+                    {
+                        jobj["context"] = context;
+                    }
+                    objs.Add(jobj);
                 }
                 return;
             }

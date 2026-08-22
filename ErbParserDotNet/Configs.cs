@@ -36,6 +36,9 @@ public static class Configs
 
     public static bool mergeString = false;
 
+    // 提取字典时是否写入上下文，默认开启
+    public static bool writeContext = true;
+
     public static string[] autoReplaceRefer = new string[0];
 
     public static void Init()
@@ -54,6 +57,7 @@ public static class Configs
                 合并同一文件的相同词条 = false,
                 屏蔽变量输出 = false,
                 合并联立字符串 = true,
+                写入上下文 = true,
                 读取这些扩展名的游戏文件 = new string[] { ".csv", ".erb", ".erh", ".erd" },
                 允许构成变量名的字符 = new string[] { "☆", "♡", "∀", "←", "→" },
                 需要处理的操作符 = new string[]
@@ -103,5 +107,16 @@ public static class Configs
         mergeSameText = (bool)configs["合并同一文件的相同词条"].ToObject(typeof(bool));
         hideVarOutput = (bool)configs["屏蔽变量输出"].ToObject(typeof(bool));
         mergeString = (bool)configs["合并联立字符串"].ToObject(typeof(bool));
+        // 旧配置文件可能没有写入上下文这一项，缺省按开启处理
+        if (configs["写入上下文"] != null)
+        {
+            writeContext = (bool)configs["写入上下文"].ToObject(typeof(bool));
+        }
+        else
+        {
+            // 把缺失的开关写回配置文件，方便用户直接在设置里看到并修改
+            configs["写入上下文"] = true;
+            File.WriteAllText(configPath, JsonConvert.SerializeObject(configs, Formatting.Indented));
+        }
     }
 }

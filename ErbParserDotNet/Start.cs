@@ -1637,7 +1637,7 @@ public static class Start
             {
                 // 如果旧条目存在，直接使用
                 // 可以选择性更新 context
-                if (entry.Context != null && (!existingObject.ContainsKey("context") || existingObject["context"]?.ToString() != entry.Context))
+                if (Configs.writeContext && entry.Context != null && (!existingObject.ContainsKey("context") || existingObject["context"]?.ToString() != entry.Context))
                 {
                     existingObject["context"] = entry.Context;
                 }
@@ -1713,7 +1713,7 @@ public static class Start
                 ["stage"] = 0
             };
 
-            if (!string.IsNullOrEmpty(Context))
+            if (Configs.writeContext && !string.IsNullOrEmpty(Context))
             {
                 jobj["context"] = Context;
             }
