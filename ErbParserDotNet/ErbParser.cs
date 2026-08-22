@@ -239,6 +239,70 @@ public class ERBParser
                        
                     }
                 }
+                else
+                {
+                    // 通用处理：CALLFORM等CALLF系指令的参数也应提取文本
+                    // 与CALL分支逻辑一致，支持CALLFORM Func(Pram)和CALLFORM Func, Pram两种形式
+                    int cmIndex = rightValue.IndexOf(",");
+                    int lfIndex = rightValue.IndexOf("(");
+                    if (lfIndex > -1 && cmIndex > lfIndex)
+                    {
+                        string functionName = rightValue.Substring(0, lfIndex);
+                        varNameList.Add(functionName, contexts);
+                        rightValue = rightValue.Substring(lfIndex).TrimEnd(')');
+                        if (Configs.mergeString)
+                        {
+                            string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var item in parts)
+                            {
+                                if (item.Contains('"'))
+                                {
+                                    textList.Add(item, contexts);
+                                }
+                                else
+                                {
+                                    var (vari, text) = ExpressionParser.Slash(item);
+                                    varNameList.AddRange(vari, contexts);
+                                    textList.AddRange(text, contexts);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var (vari, text) = ExpressionParser.Slash(rightValue);
+                            varNameList.AddRange(vari, contexts);
+                            textList.AddRange(text, contexts);
+                        }
+                    }
+                    else
+                    {
+                        // 没有括号或逗号在括号前的形式，整体解析
+                        if (Configs.mergeString)
+                        {
+                            string[] parts = rightValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var item in parts)
+                            {
+                                string str = item.Trim();
+                                if (str.Contains('"'))
+                                {
+                                    textList.Add(str, contexts);
+                                }
+                                else
+                                {
+                                    var (vari, text) = ExpressionParser.Slash(str);
+                                    varNameList.AddRange(vari, contexts);
+                                    textList.AddRange(text, contexts);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var (vari, text) = ExpressionParser.Slash(rightValue);
+                            varNameList.AddRange(vari, contexts);
+                            textList.AddRange(text, contexts);
+                        }
+                    }
+                }
 
             }
             // 声明变量，此时只会出现至多一个等号，所以以单个等号为判断依据。
