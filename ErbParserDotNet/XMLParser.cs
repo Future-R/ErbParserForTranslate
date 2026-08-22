@@ -19,8 +19,8 @@ public class XMLParser
         {
             XDocument doc = XDocument.Load(filePath, LoadOptions.None);
 
-            // 技能
-            ProcessSkillDefinitions(doc, valueList);
+            // 现在这个函数不止负责技能，还负责其他几个同样使用defname资源的文件
+            ProcessDefnameDefinitions(doc, valueList);
 
             // 敌人
             ProcessEnemyData(doc, valueList);
@@ -30,6 +30,15 @@ public class XMLParser
 
             // 地图
             ProcessGmapData(doc, valueList);
+
+            // 以下为FL特化提取类
+
+            // 称号-普通
+            ProcessTitleData(doc, valueList);
+
+            // 称号-加成
+            ProcessTitleBonusData(doc, valueList);
+
         }
         catch (Exception ex)
         {
@@ -37,13 +46,22 @@ public class XMLParser
         }
     }
 
-    static void ProcessSkillDefinitions(XDocument doc, List<string> terms)
+    static void ProcessDefnameDefinitions(XDocument doc, List<string> terms)
     {
         foreach (XElement defname in doc.Descendants("defname"))
         {
+            ExtractAttributeValue(defname, "parentname", terms);
+            ExtractElementText(defname.Element("tokenname"), terms);
             ExtractElementText(defname.Element("skillname"), terms);
             ExtractElementText(defname.Element("description"), terms);
             ExtractElementText(defname.Element("unlockhint"), terms);
+
+            XElement tooltip = defname.Element("tooltip");
+            ExtractAttributeValue(tooltip, "color", terms);
+            if (tooltip != null && !string.IsNullOrWhiteSpace(tooltip.Value))
+            {
+                terms.Add(tooltip.Value);
+            }
 
             foreach (XElement reqparam in defname.Elements("reqparam"))
             {
@@ -57,6 +75,19 @@ public class XMLParser
             {
                 ExtractAttributeValue(reqchara, "name", terms);
             }
+        }
+        foreach (XElement triggeredskill in doc.Descendants("triggeredskill"))
+         {
+            XElement skillname = triggeredskill.Element("skillname");
+            if (skillname != null && !string.IsNullOrWhiteSpace(skillname.Value))
+            {
+                terms.Add(skillname.Value);
+            }
+        }
+        foreach (XElement randomCharaTalent in doc.Descendants("randomCharaTalentES"))
+         {
+            XElement modifier = randomCharaTalent.Element("modifier");
+            ExtractAttributeValue(modifier, "eval", terms);
         }
     }
 
@@ -102,6 +133,56 @@ public class XMLParser
         {
             // 提取地图节点名称
             ExtractElementText(gmapData.Element("NODE_NAME"), terms);
+        }
+    }
+
+    //提取称号部分文字
+    static void  ProcessTitleData(XDocument doc, List<string> terms)
+    {
+        foreach (XElement title in doc.Descendants("title"))
+        {
+             ExtractAttributeValue(title, "titlename", terms);
+
+            XElement unlockHint = title.Element("unlockHint");
+            if (unlockHint != null && !string.IsNullOrWhiteSpace(unlockHint.Value))
+            {
+                terms.Add(unlockHint.Value);
+            }
+
+            XElement titleDescription = title.Element("titleDescription");
+            if (titleDescription != null && !string.IsNullOrWhiteSpace(titleDescription.Value))
+            {
+                terms.Add(titleDescription.Value);
+            }
+
+            foreach (XElement reqCondition in title.Elements("reqCondition"))
+            {
+                ExtractAttributeValue(reqCondition, "condition", terms);
+            }
+        }
+    }
+
+
+//提取加成称号部分文字
+    static void  ProcessTitleBonusData(XDocument doc, List<string> terms)
+    {
+        foreach (XElement titleBonus in doc.Descendants("titleBonus"))
+        {
+             ExtractAttributeValue(titleBonus, "name", terms);
+
+            XElement description = titleBonus.Element("description");
+            if (description != null && !string.IsNullOrWhiteSpace(description.Value))
+            {
+                terms.Add(description.Value);
+            }
+        }
+        foreach (XElement modifier in doc.Descendants("modifier"))
+        {
+            XElement modifyCondition = modifier.Element("modifyCondition");
+            if (modifyCondition != null && !string.IsNullOrWhiteSpace(modifyCondition.Value))
+            {
+                terms.Add(modifyCondition.Value);
+            }
         }
     }
 
